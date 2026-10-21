@@ -551,3 +551,64 @@ function autoRun() {
     lock.releaseLock();
   }
 }
+/* ================= Home tab (one-time setup) ================= */
+
+const BACK_OFFICE_URL = "https://script.google.com/macros/s/AKfycby2FtpOHPbhLHu-R9KxTyvHYjgf435FB92YW_bnlOW1DxCHFmZghKf1-nTAHnJG960/exec";
+const INVITE_URL = "https://bnamarketing.github.io/B-A-Smoke-Signals-Event-/";
+
+/* Only the script owner may run this (editor or Sheet). Visitors to the back office page are
+   anonymous, so their active-user email is blank and they're refused. */
+function ownerOnly_() {
+  const me = Session.getEffectiveUser().getEmail();
+  if (!me || Session.getActiveUser().getEmail() !== me) throw new Error("Only the script owner can run this.");
+}
+
+/* Run once from the editor: builds (or rebuilds) a "Home" tab with a link to the back office. Safe to re-run. */
+function setupHomeTab() {
+  ownerOnly_();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let h = ss.getSheetByName("Home");
+  if (h) { h.getDataRange().breakApart(); h.clear(); } else h = ss.insertSheet("Home", 0);
+  ss.setActiveSheet(h); ss.moveActiveSheet(1);
+
+  const INK = "#444C57", DEEP = "#16202c", CREAM = "#f4ead8", BLUE = "#7C9CC4", PALE = "#A9C1DF";
+  if (h.getMaxColumns() > 4) h.deleteColumns(5, h.getMaxColumns() - 4);
+  if (h.getMaxRows() > 22) h.deleteRows(23, h.getMaxRows() - 22);
+  h.setHiddenGridlines(true);
+  h.getRange(1, 1, h.getMaxRows(), h.getMaxColumns()).setBackground(INK).setFontFamily("Josefin Sans").setFontColor(CREAM).setVerticalAlignment("middle");
+  h.setColumnWidth(1, 40); h.setColumnWidths(2, 2, 330); h.setColumnWidth(4, 40);
+
+  const link = (cell, text, url) => cell.setRichTextValue(SpreadsheetApp.newRichTextValue().setText(text).setLinkUrl(url).build());
+  const row = (r, height) => { h.setRowHeight(r, height); return h.getRange(r, 2, 1, 2).merge(); };
+
+  row(1, 24);
+  row(2, 22).setValue("B&A HOST ACCESS").setFontColor(PALE).setFontSize(9).setFontWeight("bold");
+  row(3, 54).setValue("Smoke Signals").setFontFamily("Playfair Display").setFontStyle("italic").setFontSize(30).setFontWeight("bold");
+  row(4, 26).setValue("Wed, Nov 4 · 6:00 PM until late · Vintage Cigar Lounge, Huntsville · 21+").setFontColor(PALE).setFontSize(10);
+  row(5, 20);
+  link(row(6, 58), "Open the Back Office  →", BACK_OFFICE_URL);
+  h.getRange(6, 2, 1, 2).setBackground(BLUE).setFontColor(DEEP).setFontFamily("Anton").setFontSize(18).setHorizontalAlignment("center");
+  row(7, 24).setValue("Guest list · door check-in · send invites · settings. Ask the marketing team for the password.").setFontColor(PALE).setFontSize(9).setHorizontalAlignment("center");
+  row(8, 18);
+  link(row(9, 28), "View the guest invite page", INVITE_URL);
+  h.getRange(9, 2).setFontSize(11);
+  row(10, 18);
+  row(11, 26).setValue("WHAT'S IN THIS SHEET").setFontColor(PALE).setFontSize(9).setFontWeight("bold");
+  [["RSVPs", "Every reply from the invite page (newest at the bottom)."],
+   ["Guests", "The invite list. Status updates automatically from RSVPs."],
+   ["Check-in", "Arrivals and walk-ins recorded at the door."],
+   ["Settings", "Email wording, links and send dates. Easier to edit in the back office."],
+   ["Tracker", "The launch checklist shown on the back office Overview."]].forEach((t, i) => {
+    h.setRowHeight(12 + i, 26);
+    h.getRange(12 + i, 2).setValue(t[0]).setFontWeight("bold");
+    h.getRange(12 + i, 3).setValue(t[1]).setFontColor(PALE).setFontSize(10).setWrap(true);
+  });
+  row(17, 18);
+  row(18, 40).setValue("Tip: edit guests in the back office rather than here, so the RSVP status and invite tracking stay in sync.")
+    .setFontColor(PALE).setFontSize(9).setFontStyle("italic").setWrap(true);
+
+  h.getRange("B2:C18").setBorder(null, null, null, null, null, null);
+  h.getProtections(SpreadsheetApp.ProtectionType.SHEET).forEach(x => x.remove());  // no duplicates on re-run
+  h.protect().setDescription("Home tab layout").setWarningOnly(true);
+  return "Home tab ready.";
+}
