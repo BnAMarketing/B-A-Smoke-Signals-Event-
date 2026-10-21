@@ -2,22 +2,21 @@
 
 **Session date:** 2026-10-21
 **Session focus:** Onboard the repo to Claude Code and bring the Apps Script backend under version control.
-**Outcome:** CLAUDE.md + docs scaffold landed; backend cloned into `apps-script/` and pushed back with the admin password moved to Script Properties.
-**Next session focus:** Set the `ADMIN_PASSWORD` property, redeploy a new version, wire `/exec` into both HTML files.
+**Outcome:** CLAUDE.md + docs landed; backend under clasp, pointed at the Sheet-bound script; admin password in Script Properties; web app deployment updated to v3 and answering cleanly.
+**Next session focus:** Confirm this is the production Sheet, then wire `/exec` into both HTML files.
 
 ## What shipped
 
 - `CLAUDE.md` — orientation, layer routing, invariants, clasp commands.
 - `docs/SmokeSignals_CurrentState.md`, this handoff.
-- `apps-script/` — `Code.js`, `appsscript.json`, `.clasp.json` cloned from script `10I_SDmo…zhw-` (marketing.bna2026). **Found afterwards: that project is standalone, not bound to the Sheet, which causes the doGet error.** `.clasp.json` must be repointed to the bound script.
+- `apps-script/` — `Code.js`, `appsscript.json`, `.clasp.json` cloned from script `10I_SDmo…zhw-` (marketing.bna2026). That project turned out to be standalone (the doGet error); `.clasp.json` was repointed to the Sheet-bound "RSVP TEST" (`1S408C1h…T42eN`), pushed, and deployment `AKfycby2Ftp…960` updated to version 3.
 - `Code.js`: `ADMIN_PASSWORD` now read from Script Properties; `authed_()` also rejects an empty password. Why: the repo is public.
 
 ## Outstanding (carry forward)
 
-0. Repoint `apps-script/.clasp.json` to the Sheet-bound Script ID and `clasp push`.
-1. **[Owner, editor]** Script Properties > `ADMIN_PASSWORD` = new password. Then new deployment version.
-2. Paste `/exec` into `index.html` `RSVP_URL` and `admin.html` `API_URL`.
-3. Rename the Apps Script project from "Untitled project".
+1. Owner: test back-office login with the new password.
+2. Confirm "RSVP TEST" is the production Sheet, then wire `/exec` into `index.html` / `admin.html`.
+3. Trash the stray standalone "Untitled project".
 
 ## Files touched this chat
 
@@ -26,5 +25,5 @@
 ## Opening prompt for next session
 
 ```
-Smoke Signals repo: Claude Code scaffold + clasp are set up (see docs/SmokeSignals_CurrentState.md). I've set the ADMIN_PASSWORD script property. Next: wire the /exec URL into index.html and admin.html, then walk me through a test invite send.
+Smoke Signals repo: Claude Code scaffold + clasp are set up (see docs/SmokeSignals_CurrentState.md). Backend is live on deployment v3 and the password is in Script Properties. Next: wire the /exec URL into index.html and admin.html, then walk me through a test invite send.
 ```

@@ -8,11 +8,11 @@ Running snapshot of where this project is *right now*. Updated at the end of eve
 
 Event is **Wed Nov 4 2026** — two weeks out as of 2026-10-21. Next-session candidates, in order:
 
-0. **Repoint clasp at the Sheet-bound script.** `apps-script/.clasp.json` currently points at a *standalone* "Untitled project" (`10I_SDmo…zhw-`, no parentId). Standalone scripts get `null` from `getActiveSpreadsheet()`, which is the `doGet` error. Get the real Script ID from the "Smoke Signals RSVPs" Sheet > Extensions > Apps Script > Project Settings, put it in `.clasp.json`, `clasp push`. Then trash or ignore the stray project.
-1. **Finish the password move (editor actions, owner only):** in the Apps Script project, Project Settings > Script Properties > add `ADMIN_PASSWORD` (pick a new one — the old value sat in a plain file). Then Deploy > Manage deployments > edit > Version: New version > Deploy.
-2. **Wire the live URLs:** paste the web app `/exec` URL into `RSVP_URL` (`index.html`) and `API_URL` (`admin.html`); set `RSVP_DEADLINE` if wanted.
+1. **Owner test:** sign in to `admin.html` (or hit `/exec?key=<password>`) with the new password — expect `{"ok":true,...}`.
+2. **Wire the live URLs:** web app `/exec` = `https://script.google.com/macros/s/AKfycby2FtpOHPbhLHu-R9KxTyvHYjgf435FB92YW_bnlOW1DxCHFmZghKf1-nTAHnJG960/exec` → `RSVP_URL` (`index.html`) and `API_URL` (`admin.html`). Confirm first: the script is titled "RSVP TEST" and the deployment "Testv1", so check this is the Sheet meant for real guests.
 3. **Settings tab:** set "Invite link" (this repo's Pages URL) and "Envelope image link" (`Smoke-Signal-RSVPs` Pages URL for `smoke-signals-invite.gif`).
 4. Send a test invite (Sheet menu) before the real send.
+5. Trash the stray standalone "Untitled project" (`10I_SDmo…zhw-`) in marketing.bna2026's Drive.
 
 ---
 
@@ -29,10 +29,9 @@ Event is **Wed Nov 4 2026** — two weeks out as of 2026-10-21. Next-session can
 
 | Item | Status |
 |---|---|
-| Backend in repo (`apps-script/`) via clasp | Done 2026-10-21 |
-| `ADMIN_PASSWORD` moved to Script Properties (code) | Done in repo; pushed only to the stray standalone project, not yet to the bound one |
-| `.clasp.json` points at the Sheet-bound script | **No — needs the bound Script ID** |
-| `ADMIN_PASSWORD` property set + new version deployed | **Owner to do** |
+| Backend in repo (`apps-script/`), `.clasp.json` → Sheet-bound script "RSVP TEST" (`1S408C1h…T42eN`, parent Sheet `1-Ayv0…VQm4`) | Done 2026-10-21 |
+| `ADMIN_PASSWORD` in Script Properties | Done (owner) |
+| Deployment `AKfycby2Ftp…960` ("Testv1") | Version 3 live — wrong key returns `unauthorized` JSON, no doGet crash |
 | `RSVP_URL` / `API_URL` in HTML | Placeholder |
 | Settings tab links | Unknown — check the Sheet |
 
@@ -40,9 +39,8 @@ Event is **Wed Nov 4 2026** — two weeks out as of 2026-10-21. Next-session can
 
 ## Open issues / risks
 
-- Until the property is set, a redeploy would lock everyone out of the back office (fails closed — safe, but confusing).
-- The Apps Script project is named "Untitled project" — rename it in the editor so it's findable.
-- The doGet error seen in the GitHub back office = the standalone-project problem above.
+- The bound project is titled "RSVP TEST" — rename if it is the production one.
+- The earlier doGet error came from a standalone copy of the script (no bound Sheet → `getActiveSpreadsheet()` is null). Fixed by repointing clasp to the bound script.
 - "Claude version" of the back office (Smoke Signals Invite artifact > Host back office, PIN) works independently of this repo.
 
 ---
@@ -59,4 +57,4 @@ Event is **Wed Nov 4 2026** — two weeks out as of 2026-10-21. Next-session can
 
 | Date | Session | Outcome |
 |---|---|---|
-| 2026-10-21 | Claude Code setup | Added CLAUDE.md + docs; pulled backend into `apps-script/` with clasp; moved admin password out of code. |
+| 2026-10-21 | Claude Code setup | Added CLAUDE.md + docs; backend into `apps-script/` via clasp; admin password moved to Script Properties; clasp repointed to the Sheet-bound script; deployment updated to v3. |
