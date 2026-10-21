@@ -8,11 +8,11 @@ Running snapshot of where this project is *right now*. Updated at the end of eve
 
 Event is **Wed Nov 4 2026** — two weeks out as of 2026-10-21. Next-session candidates, in order:
 
-1. **Owner test:** sign in to `admin.html` (or hit `/exec?key=<password>`) with the new password — expect `{"ok":true,...}`.
-2. **Wire the live URLs:** web app `/exec` = `https://script.google.com/macros/s/AKfycby2FtpOHPbhLHu-R9KxTyvHYjgf435FB92YW_bnlOW1DxCHFmZghKf1-nTAHnJG960/exec` → `RSVP_URL` (`index.html`) and `API_URL` (`admin.html`). Confirm first: the script is titled "RSVP TEST" and the deployment "Testv1", so check this is the Sheet meant for real guests.
-3. **Settings tab:** set "Invite link" (this repo's Pages URL) and "Envelope image link" (`Smoke-Signal-RSVPs` Pages URL for `smoke-signals-invite.gif`).
-4. Send a test invite (Sheet menu) before the real send.
-5. Trash the stray standalone "Untitled project" (`10I_SDmo…zhw-`) in marketing.bna2026's Drive.
+1. **End-to-end test:** submit a test RSVP on the live invite, confirm the row lands in the Sheet, send a test email from the back office.
+2. **Settings tab** (back office > Settings): Invite link = `https://bnamarketing.github.io/B-A-Smoke-Signals-Event-/`; Envelope image link = `https://bnamarketing.github.io/Smoke-Signal-RSVPs/smoke-signals-invite.gif`.
+3. **RSVP deadline** — owner to supply a date; set `RSVP_DEADLINE` in `index.html`.
+4. **Print card:** regenerate the card-back QR to the live invite URL (it currently points at the Claude artifact).
+5. Trash the stray standalone "Untitled project" (`10I_SDmo…zhw-`).
 
 ---
 
@@ -29,17 +29,18 @@ Event is **Wed Nov 4 2026** — two weeks out as of 2026-10-21. Next-session can
 
 | Item | Status |
 |---|---|
-| Backend in repo (`apps-script/`), `.clasp.json` → Sheet-bound script "RSVP TEST" (`1S408C1h…T42eN`, parent Sheet `1-Ayv0…VQm4`) | Done 2026-10-21 |
+| Backend in repo (`apps-script/`), `.clasp.json` → Sheet-bound script (Sheet renamed "AFCEA TechNet RSVPs 2026"; production) (`1S408C1h…T42eN`, parent Sheet `1-Ayv0…VQm4`) | Done 2026-10-21 |
 | `ADMIN_PASSWORD` in Script Properties | Done (owner) |
 | Deployment `AKfycby2Ftp…960` ("Testv1") | Version 3 live — wrong key returns `unauthorized` JSON, no doGet crash |
-| `RSVP_URL` / `API_URL` in HTML | Placeholder |
+| `RSVP_URL` / `API_URL` in HTML | Wired to v3 `/exec` (2026-10-21); back-office login verified by owner |
+| GitHub Pages | Live: `https://bnamarketing.github.io/B-A-Smoke-Signals-Event-/` (+ `/admin.html`) |
+| `admin.html` insignia | Points at the image repo's Pages URL (no `assets/` folder in this repo) |
 | Settings tab links | Unknown — check the Sheet |
 
 ---
 
 ## Open issues / risks
 
-- The bound project is titled "RSVP TEST" — rename if it is the production one.
 - The earlier doGet error came from a standalone copy of the script (no bound Sheet → `getActiveSpreadsheet()` is null). Fixed by repointing clasp to the bound script.
 - "Claude version" of the back office (Smoke Signals Invite artifact > Host back office, PIN) works independently of this repo.
 
