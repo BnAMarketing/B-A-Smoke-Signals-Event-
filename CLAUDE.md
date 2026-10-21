@@ -2,8 +2,9 @@
 
 Invite + RSVP site and host back office for **Smoke Signals: An evening after hours with B&A**
 (AFCEA TechNet Rocket City, Wed Nov 4 2026, 6:00 PM CT, Vintage Cigar Lounge, Huntsville AL, 21+).
-Static pages on GitHub Pages talk to one Apps Script web app bound to a Google Sheet, owned by
-**marketing.bna2026@gmail.com**.
+The public invite is on GitHub Pages; the **back office is its own site served by Apps Script** (the
+web app `/exec` link, password login). Both run on one Apps Script project bound to the Google Sheet
+"AFCEA TechNet RSVPs 2026", owned by **marketing.bna2026@gmail.com**.
 
 This file is loaded into context at every Claude Code session start. Its @-imports are binding — read them before proposing any change.
 
@@ -31,8 +32,9 @@ Replace this path with the newest handoff at the end of each session that ships 
 | Layer | Primary files | What lives here |
 |---|---|---|
 | Guest page | `index.html` | Invite, RSVP form (POST form fields to `RSVP_URL`), add-to-calendar links, localStorage prefill |
-| Back office | `admin.html` | Host dashboard: guests, check-in, settings, tasks. GET `?key=` snapshot / POST JSON `{key, action, ...}` to `API_URL` |
-| Backend | `apps-script/Code.js` | `doGet` (authed snapshot), `doPost` (guest RSVP or authed action), Sheet tabs, invite/reminder email, Sheet menu |
+| Back office | `apps-script/Admin.html` | Host dashboard served by `doGet` (no `?key=`). Calls `adminApi(key, action, extra)` via `google.script.run`; password checked server-side on every call |
+| Legacy back office | `admin.html` | Old GitHub-hosted copy using `?key=` JSON. **Pending deletion** once the Apps Script one is confirmed; then remove the legacy branch in `doGet` |
+| Backend | `apps-script/Code.js` | `doGet` (serves Admin.html), `adminApi`, `doPost` (guest RSVP), Sheet tabs, invite/reminder email, Sheet menu |
 | Manifest | `apps-script/appsscript.json` | Runtime V8, web app: execute as deployer, access anyone |
 
 **Anti-patterns**: changing a field name in one HTML file without the matching `p.<field>` / `action_` case in `Code.js`; editing Sheet column order without updating `HEADERS` / `G_HEAD` / `C`; fixing a backend bug by editing only the online editor (repo drifts from Apps Script).
@@ -43,6 +45,8 @@ Replace this path with the newest handoff at the end of each session that ships 
 - **Backend change = push + new version of the existing deployment.** `clasp push` updates HEAD only; the live `/exec` URL keeps serving the old version until Deploy > Manage deployments > edit > New version. Never create a *new* deployment (new URL breaks both HTML files).
 - **The RSVP contract is shared**: form fields `first, last, email, role, company, attending` are read by `doPost`. Change both sides together.
 - **Pre-push check**: `node --check apps-script/Code.js` before any `clasp push`.
+- **Every public server function is callable from the back office page** via `google.script.run`, without the password. New server functions end in `_` unless they are `adminApi`, `doGet`/`doPost`, a trigger, or a Sheet-menu item. Menu items start with `sheetOnly_();`.
+- Login lockout: 10 wrong passwords (from anyone) in 15 min pause all logins (`authed_`, CacheService).
 - Suggest commits; push to `main` only when the user says to (it publishes the live page).
 
 ## Clasp
@@ -80,6 +84,6 @@ User-global skills that fit this repo:
 ## File inventory
 
 - `index.html` — guest invite + RSVP
-- `admin.html` — host back office
-- `apps-script/Code.js`, `apps-script/appsscript.json`, `apps-script/.clasp.json` — backend
+- `admin.html` — legacy back office (to be deleted)
+- `apps-script/Code.js`, `apps-script/Admin.html`, `apps-script/appsscript.json`, `apps-script/.clasp.json` — backend + back office
 - `docs/` — current state + session handoffs

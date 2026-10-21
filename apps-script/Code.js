@@ -8,7 +8,8 @@
  * 2. Click Save. Reload the Google Sheet. A "Smoke Signals" menu appears.
  * 3. Smoke Signals > Set up guest list. This adds the Guests, Settings, Check-in and Tracker tabs.
  * 4. Deploy > New deployment > Web app. Execute as: Me. Who has access: Anyone. Deploy.
- *    Copy the Web app URL (ends in /exec) into index.html and admin.html.
+ *    Copy the Web app URL (ends in /exec) into index.html. Open that same URL in a browser
+ *    (no ?key=) to get the back office.
  *
  * AFTER ANY CODE CHANGE: Deploy > Manage deployments > pencil > Version: New version > Deploy.
  * The web app URL stays the same.
@@ -47,7 +48,19 @@ function out_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
 function authed_(key) {
-  return ADMIN_PASSWORD !== "" && ADMIN_PASSWORD !== "CHANGE-ME" && String(key || "") === ADMIN_PASSWORD;
+  const cache = CacheService.getScriptCache();
+  if (Number(cache.get("authFails") || 0) >= MAX_AUTH_FAILS) return false;  // locked out for a while
+  const ok = ADMIN_PASSWORD !== "" && ADMIN_PASSWORD !== "CHANGE-ME" && String(key || "") === ADMIN_PASSWORD;
+  if (!ok) cache.put("authFails", String(Number(cache.get("authFails") || 0) + 1), LOCKOUT_SECONDS);
+  return ok;
+}
+const MAX_AUTH_FAILS = 10;     // wrong passwords allowed (from anyone) ...
+const LOCKOUT_SECONDS = 900;   // ... per 15 minutes before all logins pause
+
+/* Sheet-menu functions are public (menus need that), so any page this project serves could
+   call them through google.script.run. This makes them refuse to run outside the Sheet. */
+function sheetOnly_() {
+  try { SpreadsheetApp.getUi(); } catch (e) { throw new Error("Run this from the Sheet's Smoke Signals menu."); }
 }
 function clean_(v, max) {
   return String(v == null ? "" : v).slice(0, max || 200).replace(/^[=+\-@]/, "'$&");
@@ -56,6 +69,13 @@ function clean_(v, max) {
 /* GET: back office reads (password required) */
 function doGet(e) {
   const p = (e && e.parameter) || {};
+  if (p.key == null) {
+    return HtmlService.createHtmlOutputFromFile("Admin")
+      .setTitle("Smoke Signals Back Office")
+      .setFaviconUrl("https://bnamarketing.github.io/Smoke-Signal-RSVPs/insignia.png")
+      .addMetaTag("viewport", "width=device-width, initial-scale=1");
+  }
+  /* Legacy JSON read for the old GitHub admin.html. Remove once that page is deleted. */
   if (!authed_(p.key)) { Utilities.sleep(800); return out_({ ok: false, error: "unauthorized" }); }
   try {
     ensureTabs_();
@@ -106,6 +126,23 @@ function action_(b) {
     case "sendTest": return sendTest_(b.to);
     case "ping": return "pong";
     default: throw new Error("Unknown action: " + b.action);
+  }
+}
+
+/* Back office page (Admin.html) calls this through google.script.run. Password checked on every call. */
+function adminApi(key, action, extra) {
+  if (!authed_(key)) { Utilities.sleep(800); return { ok: false, error: "unauthorized" }; }
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    ensureTabs_();
+    if (action === "snapshot") return JSON.parse(JSON.stringify({ ok: true, data: snapshot_() }));
+    const result = action_(Object.assign({}, extra || {}, { action: action }));
+    return JSON.parse(JSON.stringify({ ok: true, result: result, data: snapshot_() }));
+  } catch (err) {
+    return { ok: false, error: String(err.message || err) };
+  } finally {
+    lock.releaseLock();
   }
 }
 
@@ -321,6 +358,7 @@ function onOpen() {
 }
 
 function setupGuestList() {
+  sheetOnly_();
   ensureTabs_();
   SpreadsheetApp.getUi().alert("Done. Fill in the Settings tab, then add guests on the Guests tab or in the back office.");
 }
@@ -371,7 +409,7 @@ function refreshStatus_() {
   });
   g.getRange(2, C.status, n, 1).setValues(status);
 }
-function refreshStatusMenu() { refreshStatus_(); SpreadsheetApp.getActiveSpreadsheet().toast("RSVP status updated."); }
+function refreshStatusMenu() { sheetOnly_(); refreshStatus_(); SpreadsheetApp.getActiveSpreadsheet().toast("RSVP status updated."); }
 
 /* ================= Email ================= */
 
@@ -447,12 +485,15 @@ function report_(res, what) {
 }
 
 function sendToChecked() {
+  sheetOnly_();
   report_(sendRows_(r => r[C.send - 1] === true, false, "Send the invitation to {n} checked guest(s)?"), "invitation(s)");
 }
 function sendToAllUnsent() {
+  sheetOnly_();
   report_(sendRows_(r => r[C.email - 1] && !r[C.sent - 1], false, "Send the invitation to {n} guest(s) who haven't been invited yet?"), "invitation(s)");
 }
 function sendRemindersNow() {
+  sheetOnly_();
   report_(sendRows_(r => r[C.email - 1] && r[C.sent - 1] && !r[C.reminded - 1] && !/Attending|Declined/.test(r[C.status - 1]), true,
     "Send a reminder to {n} invited guest(s) who haven't replied?"), "reminder(s)");
 }
@@ -464,6 +505,7 @@ function sendTest_(to) {
   return { sent: 1, to: me };
 }
 function sendTestEmail() {
+  sheetOnly_();
   const r = sendTest_();
   SpreadsheetApp.getUi().alert("Test invitation sent to " + r.to + ".");
 }
@@ -471,6 +513,7 @@ function sendTestEmail() {
 /* ================= Automatic sending ================= */
 
 function turnOnAuto() {
+  sheetOnly_();
   turnOffAuto_(true);
   ScriptApp.newTrigger("autoRun").timeBased().everyHours(1).create();
   const s = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SETTINGS);
@@ -480,7 +523,7 @@ function turnOnAuto() {
     "- Invites go to everyone not yet invited once \"Send invites on\" has passed" + (cfg["Send invites on"] ? " (" + cfg["Send invites on"] + ")" : " (set a date first)") + ".\n" +
     "- Reminders go to invited guests who haven't replied once \"Send reminders on\" has passed.\n\nGuests you add later are invited on the next hourly check.");
 }
-function turnOffAuto() { turnOffAuto_(false); }
+function turnOffAuto() { sheetOnly_(); turnOffAuto_(false); }
 function turnOffAuto_(quiet) {
   ScriptApp.getProjectTriggers().forEach(t => { if (t.getHandlerFunction() === "autoRun") ScriptApp.deleteTrigger(t); });
   const s = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SETTINGS);
