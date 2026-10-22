@@ -7,170 +7,187 @@
 <title>Smoke Signals Back Office</title>
 <link rel="icon" href="https://bnamarketing.github.io/Smoke-Signal-RSVPs/insignia.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Playfair+Display:ital,wght@1,700;1,900&family=Josefin+Sans:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-/* Layout: the host's side of the ticket. Sticky header with event stub, tab rail, then one working panel per tab. Single dark look, same palette as the invite. */
+/* Clean console: light ground, sidebar menu, one obvious action per screen. B&A Roboto. */
 :root{
-  --ink:#444C57;--panel:#3b424c;--deep:#16202c;--cream:#f4ead8;--gold:#7C9CC4;--pale:#A9C1DF;--sand:#c3cfdd;
-  --line:rgba(124,156,196,.28);--field:rgba(0,0,0,.22);--ok:#9fd3a8;--warn:#f0c27a;--bad:#f39a6b;
-  --display:"Anton","Impact","Arial Narrow",sans-serif;
-  --serif:"Playfair Display",Georgia,serif;
-  --body:"Josefin Sans","Century Gothic",system-ui,sans-serif;
-  color-scheme:dark;
+  --bg:#F7F8FA;--surface:#FFFFFF;--ink:#1F2630;--ink2:#3A424D;--muted:#5B6470;
+  --line:#E6E9ED;--border:#DDE2E8;--soft:#ECEFF3;--accent:#2F4F78;--accentHover:#24405F;--accentSoft:#EAF0F7;
+  --ok:#2E8B57;--okText:#1E6B42;--warn:#D99A2B;--gray:#9AA3AE;--danger:#B42318;
+  --shadow:0 1px 3px rgba(16,24,40,.07);--radius:14px;
+  color-scheme:light;
 }
 *{box-sizing:border-box}
 html,body{margin:0}
-body{background:var(--ink);color:var(--cream);font-family:var(--body);font-size:16px;line-height:1.5;
-  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 48px;overflow-x:clip}
+body{background:var(--bg);color:var(--ink);font-family:Roboto,Arial,system-ui,sans-serif;font-size:15px;line-height:1.5;overflow-x:clip}
 [hidden]{display:none!important}
 button,input,select,textarea{font:inherit;color:inherit}
-a{color:var(--pale)}
-.wrap{max-width:1180px;margin:0 auto}
+a{color:var(--accent)}a:hover{color:var(--accentHover)}
 h1,h2,h3,p{margin:0}
+.sr{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 /* buttons + fields */
-.btn{appearance:none;cursor:pointer;border:0;background:var(--gold);color:var(--deep);font-family:var(--display);font-size:17px;letter-spacing:.07em;text-transform:uppercase;padding:10px 16px;display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
-.btn:hover{background:var(--pale)}
-.btn.ghost{background:transparent;color:var(--pale);border:1px solid var(--line)}
-.btn.ghost:hover{border-color:var(--gold);color:var(--cream)}
-.btn.sm{font-size:14px;padding:7px 12px}
-.btn.danger{background:transparent;color:var(--bad);border:1px solid rgba(243,154,107,.45)}
-.btn[disabled]{opacity:.5;cursor:not-allowed}
-.btn:focus-visible,.tab:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.chip:focus-visible,.ci:focus-visible,.task input:focus-visible{outline:2px solid var(--cream);outline-offset:2px}
+.btn{appearance:none;cursor:pointer;border:0;border-radius:10px;background:var(--accent);color:#fff;font-weight:500;font-size:15px;padding:0 20px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap}
+.btn:hover{background:var(--accentHover)}
+.btn.ghost{background:var(--surface);color:var(--accent);border:1px solid var(--border)}
+.btn.ghost:hover{background:var(--accentSoft)}
+.btn.text{background:none;color:var(--accent);padding:0 10px}
+.btn.text:hover{background:var(--accentSoft)}
+.btn.sm{min-height:36px;font-size:14px;padding:0 14px}
+.btn.big{min-height:52px;font-size:16px;padding:0 26px}
+.btn[disabled]{opacity:.55;cursor:not-allowed}
 label.f{display:grid;gap:6px;min-width:0}
-label.f>span{font-size:11px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--pale)}
-input[type=text],input[type=email],input[type=password],input[type=search],input[type=url],select,textarea{width:100%;background:var(--field);border:1px solid var(--line);color:var(--cream);padding:10px 12px;border-radius:0}
-textarea{min-height:120px;resize:vertical;line-height:1.5}
-input::placeholder,textarea::placeholder{color:rgba(195,207,221,.45)}
-.msg{min-height:1.4em;font-size:14px;color:var(--sand)}
-.msg.err{color:var(--bad);font-weight:700}
-.msg.ok{color:var(--ok)}
-.label{font-size:11px;font-weight:700;letter-spacing:.26em;text-transform:uppercase;color:var(--pale)}
-.muted{color:var(--sand)}
-.panel{background:var(--panel);border:1px solid var(--line);padding:clamp(16px,2.4vw,24px);min-width:0}
+label.f>span{font-size:13px;font-weight:500;color:var(--ink2)}
+label.f>small{font-size:12px;color:var(--muted)}
+input[type=text],input[type=email],input[type=password],input[type=search],input[type=url],select,textarea{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:0 14px;min-height:44px}
+textarea{min-height:130px;padding:12px 14px;resize:vertical}
+input::placeholder,textarea::placeholder{color:#8A929C}
+.search{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:0 14px;min-height:44px}
+.search input{border:0;padding:0;min-height:0;flex:1;min-width:0;background:transparent;outline:none}
+.search:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accentSoft)}
+.search svg{flex:none}
+.msg{min-height:1.4em;font-size:14px;color:var(--muted)}
+.msg.err{color:var(--danger);font-weight:500}
+.msg.ok{color:var(--okText)}
+.muted{color:var(--muted)}
+.card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);padding:24px 28px;min-width:0}
 .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.between{justify-content:space-between}
+.check{display:flex;gap:10px;align-items:center;font-size:14px;color:var(--ink2)}
+input[type=checkbox]{accent-color:var(--accent);width:18px;height:18px;margin:0}
 
 /* login */
-.login{min-height:100vh;display:grid;place-items:center;padding-block:32px}
-.lock{width:min(420px,100%);display:grid;gap:18px}
-.lock .mark{width:72px;height:auto}
-.title{font-family:var(--display);font-weight:400;font-size:clamp(56px,14vw,84px);line-height:.95;color:transparent;-webkit-text-stroke:1.5px var(--gold);letter-spacing:.01em}
-.title em{display:block;-webkit-text-stroke:0;color:var(--cream);font-family:var(--serif);font-style:italic;font-weight:900;font-size:.55em;transform:rotate(-5deg);transform-origin:left;margin:-6px 0 4px 6px}
-.check{display:flex;gap:10px;align-items:center;font-size:14px;color:var(--sand)}
-.check input{accent-color:var(--gold);width:18px;height:18px}
+.login{min-height:100vh;display:grid;place-items:center;padding:32px 16px}
+.lock{width:min(400px,100%);display:grid;gap:18px;background:var(--surface);border-radius:18px;box-shadow:var(--shadow);padding:36px 32px}
+.lock .mark{width:56px;height:56px}
+.lock h1{font-size:26px;font-weight:700;line-height:1.2}
 
-/* header */
-header.top{position:sticky;top:0;z-index:20;background:var(--ink);padding-top:max(14px,env(safe-area-inset-top,0px));border-bottom:1px solid var(--line)}
-body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--ink)}
-.hd{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 20px;padding-bottom:12px}
-.brand{display:flex;align-items:center;gap:14px;min-width:0}
-.stub{background:var(--gold);color:var(--deep);text-align:center;padding:6px 10px 5px;line-height:1;flex:none}
-.stub b{display:block;font-family:var(--display);font-weight:400;font-size:13px;letter-spacing:.12em}
-.stub strong{display:block;font-family:var(--display);font-weight:400;font-size:30px}
-.brand h1{font-family:var(--display);font-weight:400;font-size:clamp(24px,4vw,30px);letter-spacing:.03em;text-transform:uppercase;line-height:1}
-.brand h1 span{font-family:var(--serif);font-style:italic;font-weight:900;text-transform:none;letter-spacing:0;color:var(--gold)}
-.brand small{display:block;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--sand);margin-top:4px}
-.sync{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--sand)}
+/* shell */
+.shell{display:flex;min-height:100vh}
+nav.side{flex:none;width:220px;padding:28px 16px;display:flex;flex-direction:column;gap:2px;position:sticky;top:0;height:100vh}
+.brand{padding:0 12px 28px;display:grid;gap:2px}
+.brand strong{font-size:16px}
+.brand span{font-size:13px;color:var(--muted)}
+.nav{appearance:none;cursor:pointer;border:0;background:none;text-align:left;display:flex;align-items:center;gap:12px;padding:0 12px;min-height:44px;border-radius:10px;color:var(--ink2);font-size:15px;width:100%}
+.nav:hover{background:var(--soft)}
+.nav[aria-current="page"]{background:var(--surface);box-shadow:0 1px 2px rgba(16,24,40,.06);color:var(--accent);font-weight:500}
+.nav svg{flex:none}
+.nav .n{margin-left:auto;font-size:12px;color:var(--muted);font-weight:400}
+.side .grow{flex:1}
+.sync{appearance:none;cursor:pointer;border:0;background:none;display:flex;align-items:center;gap:8px;padding:0 12px;min-height:40px;font-size:12px;color:var(--muted);border-radius:8px;text-align:left}
+.sync:hover{background:var(--soft)}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);flex:none}
 .dot.busy{background:var(--warn)}
-.dot.off{background:var(--bad)}
-.tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
-.tab{appearance:none;cursor:pointer;background:none;border:0;border-bottom:3px solid transparent;color:var(--sand);font-size:13px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;padding:10px 12px;white-space:nowrap}
-.tab[aria-selected="true"]{color:var(--cream);border-bottom-color:var(--gold)}
-.tab .n{display:inline-block;min-width:20px;margin-left:6px;padding:1px 6px;background:var(--line);color:var(--cream);font-size:11px;letter-spacing:0;border-radius:999px;text-align:center}
+.dot.off{background:var(--danger)}
+main.views{flex:1;min-width:0;padding:28px 48px 64px 24px;max-width:1080px}
+.view{display:grid;gap:24px}
+.head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 16px}
+.head h1{font-size:28px;font-weight:700;line-height:1.2}
+.head h1 .c{font-weight:400;color:var(--muted);font-size:20px;margin-left:6px}
 
-main.views{display:grid;gap:20px;padding-top:22px}
-.view{display:grid;gap:18px}
+/* home */
+.glance{display:flex;flex-wrap:wrap;gap:8px 44px;align-items:baseline}
+.glance div{display:flex;align-items:baseline;gap:8px}
+.glance b{font-size:28px;font-weight:500;color:var(--ink2);font-variant-numeric:tabular-nums}
+.glance span{color:var(--muted)}
+.glance div:first-child b{font-size:44px;font-weight:700;color:var(--ink)}
+.glance div:first-child span{color:var(--ink2)}
+.next{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:20px}
+.next .k{font-size:13px;font-weight:500;color:var(--accent)}
+.next h2{font-size:22px;font-weight:700;margin:4px 0}
+.cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:40px;align-items:start}
+.cols h2{font-size:15px;font-weight:700}
+.list>*{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;border-bottom:1px solid var(--line)}
+.task{cursor:pointer;justify-content:flex-start!important}
+.task small{color:var(--muted);font-size:13px;margin-left:4px}
+.task input:checked+span{color:var(--muted);text-decoration:line-through}
+.empty{padding:28px;text-align:center;color:var(--muted)}
 
-/* overview */
-.kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line)}
-.kpi{background:var(--panel);padding:14px 16px;display:grid;gap:2px;min-width:0}
-.kpi b{font-family:var(--display);font-weight:400;font-size:44px;line-height:1;font-variant-numeric:tabular-nums}
-.kpi span{font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--pale)}
-.kpi small{font-size:12.5px;color:var(--sand)}
-.kpi.att b{color:var(--ok)}
-.grid2{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:18px;align-items:start}
-.meter{height:10px;background:var(--deep);display:flex;overflow:hidden;margin-top:10px}
-.meter i{display:block;height:100%}
-.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--sand);margin-top:10px}
-.legend span{display:inline-flex;align-items:center;gap:6px}
-.legend i{width:10px;height:10px;display:inline-block}
-.count{font-family:var(--display);font-weight:400;font-size:64px;line-height:.9;color:var(--gold);font-variant-numeric:tabular-nums}
-.tasks{display:grid}
-.grp{font-size:11px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);margin:14px 0 2px}
-.grp:first-child{margin-top:0}
-.task{display:flex;gap:12px;align-items:flex-start;padding:10px 2px;border-bottom:1px solid var(--line);cursor:pointer}
-.task input{accent-color:var(--gold);width:19px;height:19px;margin-top:1px;flex:none}
-.task input:checked+span{color:var(--sand);text-decoration:line-through}
-.task small{display:block;color:var(--sand);font-size:12.5px;text-decoration:none}
-.progress{height:6px;background:var(--deep);margin-top:6px}
-.progress i{display:block;height:100%;background:var(--gold);transition:width .3s}
+/* segmented filters */
+.seg{display:inline-flex;flex-wrap:wrap;gap:4px;background:var(--soft);padding:4px;border-radius:10px}
+.seg button{appearance:none;cursor:pointer;border:0;border-radius:8px;background:transparent;color:var(--ink2);font-size:14px;padding:0 14px;min-height:36px;white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);font-weight:500;box-shadow:0 1px 2px rgba(16,24,40,.08)}
+
+/* status */
+.st{display:inline-flex;align-items:center;gap:8px;font-size:14px;white-space:nowrap}
+.st::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--gray);flex:none}
+.st.yes::before,.st.here::before{background:var(--ok)}
+.st.wait::before{background:var(--warn)}
+.st.new::before{background:var(--accent)}
+.st.here{color:var(--okText);font-weight:500}
+.sub{display:block;font-size:13px;color:var(--muted);overflow-wrap:anywhere}
 
 /* guests */
-.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-.bar input[type=search]{flex:1 1 240px;min-width:0}
-.chips{display:flex;flex-wrap:wrap;gap:6px}
-.chip{appearance:none;cursor:pointer;background:transparent;border:1px solid var(--line);color:var(--sand);font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;padding:6px 12px;border-radius:999px}
-.chip[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:var(--deep)}
-.tablewrap{overflow-x:auto;border:1px solid var(--line);background:var(--panel)}
-table{width:100%;border-collapse:collapse;min-width:820px;font-size:14.5px}
-th{text-align:left;font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--pale);padding:10px 10px;border-bottom:2px solid var(--gold);white-space:nowrap;position:sticky;top:0;background:var(--panel)}
-td{padding:10px 10px;border-bottom:1px solid var(--line);vertical-align:top}
-td.sel,th.sel{width:36px}
-td input[type=checkbox],th input[type=checkbox]{accent-color:var(--gold);width:17px;height:17px}
-td .nm{font-weight:700}
-td .sub{display:block;font-size:12.5px;color:var(--sand);overflow-wrap:anywhere}
-.pill{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;padding:3px 8px;border:1px solid;white-space:nowrap}
-.pill.yes{color:var(--ok);border-color:var(--ok)}
-.pill.no{color:var(--bad);border-color:rgba(243,154,107,.6)}
-.pill.wait{color:var(--sand);border-color:var(--line)}
-.pill.here{color:var(--deep);background:var(--ok);border-color:var(--ok)}
-.pill.inv{color:var(--pale);border-color:var(--gold)}
-.empty{padding:28px;text-align:center;color:var(--sand);font-style:italic}
-.selbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;background:var(--deep);border:1px solid var(--gold);padding:10px 14px}
-.selbar b{font-family:var(--display);font-weight:400;font-size:20px;letter-spacing:.04em}
-
-dialog{background:var(--panel);color:var(--cream);border:1px solid var(--gold);padding:0;width:min(620px,calc(100vw - 32px));max-height:calc(100vh - 32px)}
-dialog::backdrop{background:rgba(10,14,20,.7)}
-.dlg{padding:22px;display:grid;gap:14px}
-.dlg h2{font-family:var(--display);font-weight:400;font-size:28px;letter-spacing:.04em;text-transform:uppercase}
-.fgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.selbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;background:var(--accentSoft);border-radius:10px;padding:8px 8px 8px 16px}
+.tablewrap{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:680px}
+th{text-align:left;font-size:13px;font-weight:500;color:var(--muted);padding:14px 8px;white-space:nowrap}
+th:first-child,td:first-child{padding-left:20px;width:28px}
+th:last-child,td:last-child{padding-right:16px;width:48px}
+td{padding:12px 8px;border-top:1px solid #EEF0F3;vertical-align:middle}
+tr.on td{background:#F5F8FC}
+td .nm{font-weight:500}
+details.menu{position:relative}
+details.menu summary{list-style:none;cursor:pointer;width:40px;height:40px;border-radius:8px;display:grid;place-items:center;color:var(--muted)}
+details.menu summary::-webkit-details-marker{display:none}
+details.menu summary:hover{background:var(--soft)}
+details.menu .pop{position:absolute;right:0;top:42px;z-index:10;background:var(--surface);border-radius:10px;box-shadow:0 8px 24px rgba(16,24,40,.14);padding:6px;min-width:190px}
+details.menu .pop button{appearance:none;cursor:pointer;border:0;background:none;width:100%;text-align:left;padding:0 12px;min-height:40px;border-radius:8px;font-size:14px;color:var(--danger)}
+details.menu .pop button:hover{background:#FEF3F2}
 
 /* check-in */
-.ciTop{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:end}
-.ciBig{display:flex;align-items:baseline;gap:12px}
-.ciBig b{font-family:var(--display);font-weight:400;font-size:72px;line-height:.9;color:var(--ok);font-variant-numeric:tabular-nums}
-.ciBig span{font-size:13px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--sand)}
-.ciSearch{font-size:20px!important;padding:14px 16px!important}
+.cibig{display:flex;align-items:baseline;gap:8px}
+.cibig b{font-size:36px;font-variant-numeric:tabular-nums}
+.cibig span{font-size:16px;color:var(--ink2)}
+.bar{height:8px;border-radius:999px;background:#E3E8EE;overflow:hidden;max-width:420px;margin-top:10px}
+.bar i{display:block;height:100%;background:var(--ok);transition:width .3s}
+.cisearch{border:2px solid var(--accent);border-radius:14px;min-height:60px;padding:0 18px}
+.cisearch input{font-size:19px}
 .cilist{display:grid;gap:8px}
-.ci{appearance:none;cursor:pointer;width:100%;text-align:left;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;background:var(--panel);border:1px solid var(--line);padding:14px 16px;min-height:64px}
-.ci:hover{border-color:var(--gold)}
-.ci .nm{font-size:18px;font-weight:700;display:block;overflow-wrap:anywhere}
-.ci .sub{font-size:13px;color:var(--sand);overflow-wrap:anywhere}
-.ci.here{background:rgba(159,211,168,.08);border-color:rgba(159,211,168,.5)}
-.ci .act{font-family:var(--display);font-size:16px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold)}
-.ci.here .act{color:var(--ok)}
+.ci{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;background:var(--surface);border-radius:14px;box-shadow:0 1px 2px rgba(16,24,40,.06);padding:12px 12px 12px 20px;min-height:72px}
+.ci .nm{font-size:18px;font-weight:500;display:block;overflow-wrap:anywhere}
+.ci .here{display:flex;align-items:center;gap:6px}
 
-/* send */
-.sendgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
-.sendcard{display:grid;gap:10px;align-content:start}
-.sendcard h3{font-family:var(--display);font-weight:400;font-size:22px;letter-spacing:.04em;text-transform:uppercase}
-.sendcard .big{font-family:var(--display);font-size:40px;line-height:1;color:var(--gold);font-variant-numeric:tabular-nums}
-.setgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+/* emails */
+.sendrow{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;padding:20px 0;border-top:1px solid var(--line)}
+.sendrow:first-child{border-top:0;padding-top:0}
+.sendrow h2{font-size:17px;font-weight:700}
+.sendrow .test{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.sendrow .test input{width:260px;max-width:100%}
 
-.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--deep);border:1px solid var(--gold);color:var(--cream);padding:12px 18px;z-index:50;max-width:calc(100vw - 32px);font-size:15px}
+/* settings */
+.setgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 20px}
 
-@media (max-width:900px){
-  .kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
-  .grid2,.sendgrid,.setgrid{grid-template-columns:1fr}
-}
-@media (max-width:560px){
-  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .kpi b{font-size:36px}
-  .fgrid{grid-template-columns:1fr}
-  .ciTop{grid-template-columns:1fr}
+/* dialogs */
+dialog{border:0;border-radius:18px;padding:0;width:min(560px,calc(100vw - 32px));max-height:calc(100vh - 32px);box-shadow:0 20px 50px rgba(16,24,40,.25);color:var(--ink)}
+dialog::backdrop{background:rgba(16,24,40,.45)}
+.dlg{padding:28px;display:grid;gap:16px}
+.dlg h2{font-size:22px;font-weight:700}
+.fgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:#fff;border-radius:10px;padding:12px 18px;z-index:50;max-width:calc(100vw - 32px);font-size:15px;box-shadow:0 8px 24px rgba(16,24,40,.2)}
+
+/* phones + tablets: sidebar becomes a top bar */
+@media (max-width:820px){
+  .shell{flex-direction:column}
+  nav.side{position:sticky;top:0;z-index:20;width:auto;height:auto;flex-direction:row;align-items:center;gap:4px;padding:10px 12px;background:var(--bg);border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+  .brand{display:none}
+  .nav{width:auto;flex:none;padding:0 12px;white-space:nowrap}
+  .nav svg{display:none}
+  .nav .n{margin-left:6px}
+  .side .grow{display:none}
+  .sync{flex:none}
   .sync .lbl{display:none}
+  main.views{padding:20px 16px 56px}
+  .cols,.setgrid{grid-template-columns:1fr}
+  .card{padding:20px}
+}
+@media (max-width:520px){
+  .fgrid{grid-template-columns:1fr}
+  .glance{gap:6px 24px}
+  .head h1{font-size:24px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -180,140 +197,153 @@ dialog::backdrop{background:rgba(10,14,20,.7)}
 <!-- ============ LOGIN ============ -->
 <section class="login" id="login">
   <form class="lock" id="loginForm" novalidate>
-    <img class="mark" src="https://bnamarketing.github.io/Smoke-Signal-RSVPs/insignia.png" alt="">
-    <div class="label">B&amp;A host access</div>
-    <h1 class="title">SMOKE<em>Signals</em></h1>
-    <p class="muted">Back office: guest list, tracker, check-in and send-outs.</p>
+    <img class="mark" src="https://bnamarketing.github.io/Smoke-Signal-RSVPs/insignia.png" alt="B&amp;A">
+    <div style="display:grid;gap:4px">
+      <h1>Smoke Signals</h1>
+      <p class="muted">Host back office · Nov 4 · Huntsville</p>
+    </div>
     <label class="f"><span>Password</span><input type="password" id="pw" autocomplete="current-password" required></label>
     <label class="check"><input type="checkbox" id="remember"> Keep me signed in on this device</label>
-    <button class="btn" type="submit" id="loginBtn">Open back office</button>
+    <button class="btn big" type="submit" id="loginBtn">Sign in</button>
     <p class="msg" id="loginMsg" role="status"></p>
   </form>
 </section>
 
 <!-- ============ APP ============ -->
-<div id="app" hidden>
-<header class="top"><div class="wrap">
-  <div class="hd">
-    <div class="brand">
-      <div class="stub"><b>NOV</b><strong>04</strong></div>
-      <div><h1>Smoke <span>Signals</span></h1><small>Vintage Cigar Lounge · Huntsville</small></div>
-    </div>
-    <div class="sync"><i class="dot" id="syncDot"></i><span class="lbl" id="syncLbl">Synced</span>
-      <button class="btn ghost sm" type="button" id="refreshBtn">Refresh</button>
-      <button class="btn ghost sm" type="button" id="logoutBtn">Sign out</button></div>
-  </div>
-  <nav class="tabs" role="tablist" aria-label="Back office sections">
-    <button class="tab" role="tab" data-v="overview" aria-selected="true">Overview</button>
-    <button class="tab" role="tab" data-v="guests">Guest list<span class="n" id="nGuests">0</span></button>
-    <button class="tab" role="tab" data-v="checkin">Check-in<span class="n" id="nHere">0</span></button>
-    <button class="tab" role="tab" data-v="send">Send invites</button>
-    <button class="tab" role="tab" data-v="settings">Settings</button>
+<div id="app" class="shell" hidden>
+  <nav class="side" aria-label="Back office sections">
+    <div class="brand"><strong>Smoke Signals</strong><span>Nov 4 · Huntsville</span></div>
+    <button class="nav" type="button" data-v="overview" aria-current="page">
+      <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/></svg>Home</button>
+    <button class="nav" type="button" data-v="guests">
+      <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6"/></svg>Guests<span class="n" id="nGuests">0</span></button>
+    <button class="nav" type="button" data-v="checkin">
+      <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/></svg>Check-in<span class="n" id="nHere">0</span></button>
+    <button class="nav" type="button" data-v="send">
+      <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>Emails</button>
+    <button class="nav" type="button" data-v="settings">
+      <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>Settings</button>
+    <div class="grow"></div>
+    <button class="sync" type="button" id="refreshBtn" title="Refresh now"><i class="dot" id="syncDot"></i><span class="lbl" id="syncLbl">Synced</span></button>
+    <button class="nav" type="button" id="logoutBtn" style="font-size:14px;color:var(--muted)">Sign out</button>
   </nav>
-</div></header>
 
-<main class="wrap views">
+  <main class="views">
 
-  <!-- overview -->
-  <section class="view" id="v-overview">
-    <div class="kpis" id="kpis"></div>
-    <div class="grid2">
-      <div class="panel" style="display:grid;gap:16px">
-        <div class="row" style="justify-content:space-between;align-items:flex-end">
-          <div><div class="label">Event night</div><div class="count" id="cdDays">–</div><div class="muted" id="cdTxt"></div></div>
-          <div style="text-align:right"><div class="label">Headcount</div><div class="count" id="headcount">0</div><div class="muted" id="capTxt">attending</div></div>
-        </div>
-        <div>
-          <div class="label">Replies</div>
-          <div class="meter" id="meter"></div>
-          <div class="legend" id="legend"></div>
-        </div>
-        <div>
-          <div class="label" style="margin-bottom:6px">Latest RSVPs</div>
-          <div id="latest"></div>
+    <!-- home -->
+    <section class="view" id="v-overview">
+      <div class="head">
+        <h1 id="hello">Hello</h1>
+        <label class="search" style="flex:0 1 360px">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B6470" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.5-4.5"/></svg>
+          <span class="sr">Find a guest</span><input type="search" id="homeQ" placeholder="Find a guest">
+        </label>
+      </div>
+      <section class="glance" id="glance" aria-label="At a glance"></section>
+      <section class="card next" id="next" aria-label="Do this next"></section>
+      <div class="cols">
+        <section aria-labelledby="hTasks">
+          <div class="row between" style="margin-bottom:4px"><h2 id="hTasks">Coming up</h2><span class="muted" style="font-size:13px" id="taskTxt"></span></div>
+          <div class="list" id="tasks"></div>
+          <button class="btn text sm" type="button" id="tasksMore" style="margin-top:8px"></button>
+        </section>
+        <section aria-labelledby="hLatest">
+          <div class="row between" style="margin-bottom:4px"><h2 id="hLatest">New replies</h2><button class="btn text sm" type="button" data-go="guests">See all</button></div>
+          <div class="list" id="latest"></div>
+        </section>
+      </div>
+    </section>
+
+    <!-- guests -->
+    <section class="view" id="v-guests" hidden>
+      <div class="head">
+        <h1>Guests<span class="c" id="gCount"></span></h1>
+        <div class="row">
+          <button class="btn text" type="button" id="csvBtn">CSV</button>
+          <button class="btn ghost" type="button" id="xlsxBtn">Download Excel</button>
+          <button class="btn" type="button" id="addBtn">Add guests</button>
         </div>
       </div>
-      <div class="panel">
-        <div class="row" style="justify-content:space-between"><div class="label">Event tracker</div><span class="muted" id="taskTxt"></span></div>
-        <div class="progress"><i id="taskBar" style="width:0"></i></div>
-        <div class="tasks" id="tasks" style="margin-top:12px"></div>
+      <div class="head">
+        <div class="seg" id="gfilters" role="group" aria-label="Show"></div>
+        <label class="search" style="flex:0 1 320px">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B6470" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.5-4.5"/></svg>
+          <span class="sr">Search guests</span><input type="search" id="gq" placeholder="Search name, email or company">
+        </label>
       </div>
-    </div>
-  </section>
+      <div class="selbar" id="selbar" hidden><b id="selN" style="font-weight:500">0 selected</b>
+        <button class="btn sm" type="button" id="selInvite">Send invite</button>
+        <button class="btn text sm" type="button" id="selClear">Clear</button></div>
+      <div class="tablewrap"><table>
+        <thead><tr><th><input type="checkbox" id="selAll" aria-label="Select all shown"></th><th>Name</th><th>Organization</th><th>Status</th><th>Invite</th><th><span class="sr">Actions</span></th></tr></thead>
+        <tbody id="gbody"></tbody>
+      </table></div>
+      <p class="msg" id="gMsg" role="status"></p>
+    </section>
 
-  <!-- guests -->
-  <section class="view" id="v-guests" hidden>
-    <div class="bar">
-      <input type="search" id="gq" placeholder="Search name, email or company" aria-label="Search guests">
-      <button class="btn" type="button" id="addBtn">+ Add guests</button>
-      <button class="btn ghost" type="button" id="xlsxBtn">Export Excel</button>
-      <button class="btn ghost" type="button" id="csvBtn">CSV</button>
-    </div>
-    <div class="chips" id="gfilters" role="group" aria-label="Filter guests"></div>
-    <div class="selbar" id="selbar" hidden><b id="selN">0 selected</b>
-      <button class="btn sm" type="button" id="selInvite">Send invite</button>
-      <button class="btn ghost sm" type="button" id="selClear">Clear</button></div>
-    <div class="tablewrap"><table>
-      <thead><tr><th class="sel"><input type="checkbox" id="selAll" aria-label="Select all shown"></th><th>Guest</th><th>Company / role</th><th>Reply</th><th>Invite</th><th>Arrived</th><th>Notes</th><th></th></tr></thead>
-      <tbody id="gbody"></tbody>
-    </table></div>
-    <p class="msg" id="gMsg" role="status"></p>
-  </section>
+    <!-- check-in -->
+    <section class="view" id="v-checkin" hidden>
+      <div class="head" style="align-items:flex-end">
+        <div style="flex:1 1 300px">
+          <h1>Door check-in</h1>
+          <div class="cibig" style="margin-top:8px"><b id="ciHere">0</b><span id="ciOf">of 0 here</span></div>
+          <div class="bar" role="img" id="ciBarWrap" aria-label="Checked in"><i id="ciBar" style="width:0"></i></div>
+        </div>
+        <button class="btn ghost big" type="button" id="walkBtn">Add walk-in</button>
+      </div>
+      <label class="search cisearch">
+        <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2F4F78" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.5-4.5"/></svg>
+        <span class="sr">Find a guest</span><input type="search" id="ciq" placeholder="Type a name to find a guest">
+      </label>
+      <div class="seg" id="cifilters" role="group" aria-label="Show"></div>
+      <div class="cilist" id="cilist"></div>
+    </section>
 
-  <!-- check-in -->
-  <section class="view" id="v-checkin" hidden>
-    <div class="ciTop">
-      <div><div class="ciBig"><b id="ciHere">0</b><span id="ciOf">of 0 expected</span></div>
-        <div class="progress" style="margin-top:10px"><i id="ciBar" style="width:0"></i></div></div>
-      <div class="row"><button class="btn" type="button" id="walkBtn">+ Walk-in</button></div>
-    </div>
-    <input type="search" class="ciSearch" id="ciq" placeholder="Find a guest by name, email or company" aria-label="Find a guest">
-    <div class="chips" id="cifilters" role="group" aria-label="Show"></div>
-    <div class="cilist" id="cilist"></div>
-  </section>
-
-  <!-- send -->
-  <section class="view" id="v-send" hidden>
-    <div class="sendgrid">
-      <div class="panel sendcard"><div class="label">Not yet invited</div><div class="big" id="sUnsent">0</div>
-        <h3>Send invites</h3><p class="muted">Emails everyone on the list who hasn't had an invite yet. Each email has their personal link.</p>
-        <button class="btn" type="button" id="sendUnsent">Send to all not invited</button></div>
-      <div class="panel sendcard"><div class="label">Invited, no reply</div><div class="big" id="sRemind">0</div>
-        <h3>Send reminders</h3><p class="muted">One reminder to guests who were invited but haven't replied and haven't had a reminder.</p>
-        <button class="btn" type="button" id="sendRemind">Send reminders</button></div>
-      <div class="panel sendcard"><div class="label">Check before sending</div><div class="big" id="sQuota">–</div>
-        <h3>Test email</h3><p class="muted">Emails left today from the sheet's Google account. Send yourself a test first.</p>
-        <label class="f"><span>Send test to</span><input type="email" id="testTo" placeholder="you@bna-inc.com"></label>
-        <button class="btn ghost" type="button" id="sendTest">Send test</button></div>
-    </div>
-    <div class="panel" style="display:grid;gap:10px">
-      <div class="label">Automatic sending</div>
-      <p class="muted" id="autoTxt"></p>
-      <p class="muted">Schedule it from the Google Sheet: fill in <b>Send invites on</b> and <b>Send reminders on</b> on the Settings tab, then <b>Smoke Signals &gt; Turn on automatic sending</b>.</p>
+    <!-- emails -->
+    <section class="view" id="v-send" hidden>
+      <div class="head"><h1>Emails</h1><span class="muted" style="font-size:14px"><b id="sQuota">–</b> emails left today</span></div>
+      <div class="card" style="display:grid">
+        <div class="sendrow">
+          <div><h2>Invitations</h2><p class="muted"><b id="sUnsent">0</b> guests on the list haven't been invited yet. Each email has their personal link.</p></div>
+          <button class="btn" type="button" id="sendUnsent">Send invitations</button>
+        </div>
+        <div class="sendrow">
+          <div><h2>Reminders</h2><p class="muted"><b id="sRemind">0</b> invited guests haven't replied. They each get one reminder.</p></div>
+          <button class="btn" type="button" id="sendRemind">Send reminders</button>
+        </div>
+        <div class="sendrow">
+          <div><h2>Test email</h2><p class="muted">See exactly what guests get. Open it on your phone too.</p></div>
+          <div class="test"><label class="sr" for="testTo">Send test to</label><input type="email" id="testTo" placeholder="you@bna-inc.com"><button class="btn ghost" type="button" id="sendTest">Send test</button></div>
+        </div>
+      </div>
       <p class="msg" id="sMsg" role="status"></p>
-    </div>
-  </section>
+      <div style="display:grid;gap:6px">
+        <h2 style="font-size:15px">Automatic sending</h2>
+        <p class="muted" id="autoTxt"></p>
+        <p class="muted" style="font-size:14px">To schedule it, fill in <b>Send invites on</b> and <b>Send reminders on</b> in the Sheet's Settings tab, then choose <b>Smoke Signals › Turn on automatic sending</b>.</p>
+      </div>
+    </section>
 
-  <!-- settings -->
-  <section class="view" id="v-settings" hidden>
-    <form class="panel" id="setForm" style="display:grid;gap:16px">
-      <div class="label">Invitation email settings</div>
-      <div class="setgrid" id="setFields"></div>
-      <div class="row"><button class="btn" type="submit">Save settings</button><span class="msg" id="setMsg" role="status"></span></div>
-    </form>
-    <div class="panel" style="display:grid;gap:8px">
-      <div class="label">Links</div>
-      <p class="muted">Invite page: <a id="lnkInvite" target="_blank" rel="noopener"></a></p>
-      <p class="muted">Everything here lives in your Google Sheet. Open it any time to see the RSVPs, Guests, Check-in and Tracker tabs.</p>
-    </div>
-  </section>
-</main>
+    <!-- settings -->
+    <section class="view" id="v-settings" hidden>
+      <div class="head"><h1>Settings</h1></div>
+      <form class="card" id="setForm" style="display:grid;gap:20px">
+        <h2 style="font-size:17px">Invitation email</h2>
+        <div class="setgrid" id="setFields"></div>
+        <div class="row"><button class="btn" type="submit">Save settings</button><span class="msg" id="setMsg" role="status"></span></div>
+      </form>
+      <div style="display:grid;gap:6px">
+        <p class="muted">Invite page: <a id="lnkInvite" target="_blank" rel="noopener"></a></p>
+        <p class="muted" style="font-size:14px">Everything here lives in the Google Sheet. Open it any time to see the RSVPs, Guests, Check-in and Tracker tabs.</p>
+      </div>
+    </section>
+  </main>
 </div>
 
 <!-- add guests -->
 <dialog id="addDlg"><form class="dlg" id="addForm" method="dialog" novalidate>
   <h2>Add guests</h2>
-  <div class="chips" role="group" aria-label="How to add"><button class="chip" type="button" data-m="one" aria-pressed="true">One guest</button><button class="chip" type="button" data-m="paste" aria-pressed="false">Paste a list</button></div>
+  <div class="seg" role="group" aria-label="How to add"><button type="button" data-m="one" aria-pressed="true">One guest</button><button type="button" data-m="paste" aria-pressed="false">Paste a list</button></div>
   <div id="addOne" class="fgrid">
     <label class="f"><span>First name</span><input type="text" id="aFirst"></label>
     <label class="f"><span>Last name</span><input type="text" id="aLast"></label>
@@ -322,28 +352,28 @@ dialog::backdrop{background:rgba(10,14,20,.7)}
   </div>
   <div id="addPaste" hidden style="display:grid;gap:8px">
     <label class="f"><span>Paste from Excel</span><textarea id="aPaste" placeholder="First name	Last name	Email	Company"></textarea></label>
-    <p class="muted" style="font-size:13px">One guest per line, columns in this order: first name, last name, email, company. Tabs or commas both work. A header row is skipped. Guests already on the list are updated, not duplicated.</p>
+    <p class="muted" style="font-size:13px">One guest per line: first name, last name, email, company. Tabs or commas both work. A header row is skipped, and guests already on the list are updated instead of duplicated.</p>
   </div>
   <p class="msg" id="addMsg" role="status"></p>
-  <div class="row"><button class="btn" type="button" id="addSave">Add to list</button><button class="btn ghost" type="button" id="addCancel">Cancel</button></div>
+  <div class="row"><button class="btn" type="button" id="addSave">Add to list</button><button class="btn text" type="button" id="addCancel">Cancel</button></div>
 </form></dialog>
 
 <!-- walk-in -->
 <dialog id="walkDlg"><form class="dlg" id="walkForm" method="dialog" novalidate>
-  <h2>Walk-in</h2>
+  <h2>Add a walk-in</h2>
   <div class="fgrid">
     <label class="f"><span>Full name</span><input type="text" id="wName"></label>
     <label class="f"><span>Company</span><input type="text" id="wCompany"></label>
     <label class="f" style="grid-column:1/-1"><span>Email (optional)</span><input type="email" id="wEmail"></label>
   </div>
   <p class="msg" id="walkMsg" role="status"></p>
-  <div class="row"><button class="btn" type="button" id="walkSave">Check in</button><button class="btn ghost" type="button" id="walkCancel">Cancel</button></div>
+  <div class="row"><button class="btn" type="button" id="walkSave">Check in</button><button class="btn text" type="button" id="walkCancel">Cancel</button></div>
 </form></dialog>
 
 <!-- confirm -->
 <dialog id="confDlg"><div class="dlg">
   <h2 id="confT">Are you sure?</h2><p class="muted" id="confB"></p>
-  <div class="row"><button class="btn" type="button" id="confYes">Yes</button><button class="btn ghost" type="button" id="confNo">Cancel</button></div>
+  <div class="row"><button class="btn" type="button" id="confYes">Yes</button><button class="btn text" type="button" id="confNo">Cancel</button></div>
 </div></dialog>
 
 <div class="toast" id="toast" role="status" hidden></div>
@@ -366,12 +396,12 @@ const TASKS = [
   ["Event day", [
     ["headcount", "Final headcount sent to the venue", ""],
     ["device", "Check-in device charged and signed in", "Phone or tablet at the door"],
-    ["printed", "Backup printed guest list", "Export Excel from the Guest list tab"]]]
+    ["printed", "Backup printed guest list", "Download Excel from Guests"]]]
 ];
 
 const $ = id => document.getElementById(id);
 const el = (t, c, txt) => { const e = document.createElement(t); if (c) e.className = c; if (txt != null) e.textContent = txt; return e; };
-let KEY = "", D = null, view = "overview", gFilter = "all", ciFilter = "expected", sel = new Set(), busy = 0, poll = null;
+let KEY = "", D = null, view = "overview", gFilter = "all", ciFilter = "expected", sel = new Set(), busy = 0, poll = null, tasksAll = false;
 
 /* ---------- storage (per device convenience only) ---------- */
 const store = {
@@ -402,7 +432,7 @@ async function apiPost(action, extra) {
 async function load(quiet) {
   if (!quiet) setSync("busy", "Loading…");
   try { D = await apiGet(); render(); setSync("ok", "Synced " + timeStr(new Date())); }
-  catch (e) { setSync("off", e.message === "unauthorized" ? "Signed out" : "Offline"); if (e.message === "unauthorized") logout(); else if (!quiet) toast("Couldn't reach the sheet. Check your connection and refresh."); }
+  catch (e) { setSync("off", e.message === "unauthorized" ? "Signed out" : "Offline"); if (e.message === "unauthorized") logout(); else if (!quiet) toast("Couldn't reach the sheet. Check your connection and try again."); }
 }
 
 /* ---------- helpers ---------- */
@@ -410,6 +440,7 @@ const lc = s => String(s || "").toLowerCase().trim();
 const timeStr = d => d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 const dateStr = s => { if (!s) return ""; const d = new Date(s); return isNaN(d) ? String(s) : d.toLocaleDateString([], { month: "short", day: "numeric" }); };
 const dtStr = s => { if (!s) return ""; const d = new Date(s); return isNaN(d) ? String(s) : d.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); };
+const plural = (n, one, many) => n + " " + (n === 1 ? one : (many || one + "s"));
 function toast(t) { const x = $("toast"); x.textContent = t; x.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => x.hidden = true, 3800); }
 function confirmBox(title, body) {
   return new Promise(res => { $("confT").textContent = title; $("confB").textContent = body; const d = $("confDlg");
@@ -436,127 +467,167 @@ function people() {
   return [...map.values()].sort((a, b) => (b.replied || "").localeCompare(a.replied || "") || lc(a.first + a.last).localeCompare(lc(b.first + b.last)));
 }
 const nameOf = p => ((p.first || "") + " " + (p.last || "")).trim() || p.email || "Guest";
+const unsentOf = P => P.filter(p => p.onList && p.email && !p.sent);
+const remindOf = P => P.filter(p => p.onList && p.sent && !p.reminded && !p.reply);
+
+/* Plain-language status, used everywhere */
+function status(p, ignoreArrival) {
+  if (p.arrived && !ignoreArrival) return el("span", "st here", "Here · " + timeStr(new Date(p.arrived)));
+  if (p.reply === "yes") return el("span", "st yes", "Coming");
+  if (p.reply === "no") return el("span", "st no", "Can't make it");
+  if (p.sent) return el("span", "st wait", "Invited, no reply");
+  return el("span", "st new", p.onList ? "Not invited yet" : "No reply");
+}
 
 /* ---------- render ---------- */
 function render() {
   if (!D) return;
   const P = people();
   const att = P.filter(p => p.reply === "yes").length, dec = P.filter(p => p.reply === "no").length;
-  const invited = P.filter(p => p.sent).length, noReply = P.filter(p => p.onList && !p.reply).length, here = P.filter(p => p.arrived).length;
+  const noReply = P.filter(p => p.onList && !p.reply).length, here = P.filter(p => p.arrived).length;
   $("nGuests").textContent = P.length; $("nHere").textContent = here;
-  renderOverview(P, { att, dec, invited, noReply, here });
+  renderHome(P, { att, dec, noReply, here });
   renderGuests(P); renderCheckin(P); renderSend(P); renderSettings();
 }
 
-function renderOverview(P, k) {
+function renderHome(P, k) {
+  const h = new Date().getHours();
+  $("hello").textContent = h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
   const cap = parseInt(D.settings["Venue capacity"], 10);
-  const K = [["Guests", P.length, "on the list"], ["Invited", k.invited, "emails sent"], ["Attending", k.att, cap ? "of " + cap + " capacity" : "said yes", "att"], ["Declined", k.dec, "said no"], ["Checked in", k.here, "at the door"]];
-  const box = $("kpis"); box.textContent = "";
-  K.forEach(([l, n, s, c]) => { const d = el("div", "kpi" + (c ? " " + c : "")); d.append(el("b", null, String(n)), el("span", null, l), el("small", null, s)); box.append(d); });
   const days = Math.ceil((EVENT.start - new Date()) / 864e5);
-  $("cdDays").textContent = days > 0 ? days : days === 0 ? "Tonight" : "Done";
-  $("cdTxt").textContent = days > 1 ? "days to go · Wed, Nov 4 · 6:00 PM" : days === 1 ? "day to go · Wed, Nov 4 · 6:00 PM" : days === 0 ? "Wed, Nov 4 · 6:00 PM" : "Event has passed";
-  $("headcount").textContent = k.att; $("capTxt").textContent = cap ? "attending of " + cap : "attending";
-  const tot = Math.max(1, P.filter(p => p.onList || p.reply).length), wait = Math.max(0, tot - k.att - k.dec);
-  const m = $("meter"); m.textContent = "";
-  [[k.att, "var(--ok)", "Attending"], [k.dec, "var(--bad)", "Declined"], [wait, "var(--line)", "No reply"]].forEach(([n, c]) => { const i = el("i"); i.style.width = (n / tot * 100) + "%"; i.style.background = c; m.append(i); });
-  const lg = $("legend"); lg.textContent = "";
-  [[k.att, "var(--ok)", "Attending"], [k.dec, "var(--bad)", "Declined"], [wait, "var(--line)", "No reply yet"]].forEach(([n, c, l]) => { const s = el("span"); const i = el("i"); i.style.background = c; s.append(i, document.createTextNode(n + " " + l)); lg.append(s); });
+  const g = $("glance"); g.textContent = "";
+  const stat = (n, l) => { const d = el("div"); d.append(el("b", null, String(n)), el("span", null, l)); g.append(d); };
+  stat(k.att, cap ? "coming of " + cap : "coming");
+  stat(k.noReply, "no reply yet");
+  stat(k.dec, "can't make it");
+  if (days > 0) stat(days, days === 1 ? "day to go" : "days to go"); else stat(k.here, "checked in");
+
+  // one next action, picked from the data
+  const link = String(D.settings["Invite link"] || "");
+  const unsent = unsentOf(P).length, remind = remindOf(P).length;
+  let n;
+  if (!P.length) n = ["Add your guest list", "Type guests in one at a time or paste a list from Excel.", "Add guests", () => $("addBtn").click()];
+  else if (!link || /YOURNAME/.test(link)) n = ["Finish the email settings", "The invite link has to be set before any invitations can go out.", "Open settings", () => show("settings")];
+  else if (days <= 0 && days > -2) n = ["Check guests in at the door", k.here + " of " + k.att + " here so far.", "Open check-in", () => show("checkin")];
+  else if (unsent) n = ["Invite " + plural(unsent, "guest") + " who haven't been invited", "You'll confirm before anything sends.", "Review invitations", () => show("send")];
+  else if (remind) n = ["Remind " + plural(remind, "guest") + " who haven't replied", "You'll confirm before anything sends.", "Review reminders", () => show("send")];
+  else n = ["You're all caught up", "Everyone has been invited and reminded. Replies show up below as they come in.", "Open guest list", () => show("guests")];
+  const nx = $("next"); nx.textContent = "";
+  const l = el("div"); l.append(el("div", "k", "Do this next"), el("h2", null, n[0]), el("p", "muted", n[1]));
+  const b = el("button", "btn big", n[2]); b.type = "button"; b.onclick = n[3];
+  nx.append(l, b);
+
+  // coming up: unchecked tasks first, a few at a time
+  const t = $("tasks"); t.textContent = ""; let total = 0, done = 0; const all = [];
+  TASKS.forEach(([grp, items]) => items.forEach(([id, label, hint]) => { total++; const on = !!(D.tasks[id] && D.tasks[id].done); if (on) done++; all.push({ id, label, hint, on }); }));
+  const shown = tasksAll ? all : all.filter(x => !x.on).slice(0, 4);
+  if (!shown.length) t.append(el("p", "muted", "Every task is done."));
+  shown.forEach(x => {
+    const lb = el("label", "task"); const cb = el("input"); cb.type = "checkbox"; cb.checked = x.on; cb.id = "task-" + x.id;
+    cb.onchange = async () => { try { await apiPost("setTask", { task: x.id, done: cb.checked }); } catch (e) { cb.checked = !cb.checked; toast("That didn't save. Try again."); } };
+    const sp = el("span", null, x.label); if (x.hint && tasksAll) sp.append(el("small", null, "· " + x.hint));
+    lb.append(cb, sp); t.append(lb); });
+  $("taskTxt").textContent = done + " of " + total + " done";
+  $("tasksMore").textContent = tasksAll ? "Show fewer" : "See the whole checklist";
+
   const lt = $("latest"); lt.textContent = "";
   const recent = P.filter(p => p.replied).slice(0, 5);
-  if (!recent.length) lt.append(el("p", "muted", "No RSVPs yet. They show up here as guests reply on the invite."));
-  recent.forEach(p => { const r = el("div", "row"); r.style.cssText = "justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line)";
-    const l = el("div"); l.append(el("span", "nm", nameOf(p)), el("span", "sub muted", " · " + (p.company || ""))); l.querySelector(".sub").style.fontSize = "13px";
-    r.append(l, pill(p)); lt.append(r); });
-  // tracker
-  const t = $("tasks"); t.textContent = ""; let total = 0, done = 0;
-  TASKS.forEach(([g, items]) => { t.append(el("div", "grp", g));
-    items.forEach(([id, label, hint]) => { total++; const on = !!(D.tasks[id] && D.tasks[id].done); if (on) done++;
-      const lb = el("label", "task"); const cb = el("input"); cb.type = "checkbox"; cb.checked = on; cb.id = "task-" + id;
-      cb.onchange = async () => { try { await apiPost("setTask", { task: id, done: cb.checked }); } catch (e) { cb.checked = !cb.checked; toast("That didn't save. Try again."); } };
-      const sp = el("span", null, label); if (hint) sp.append(el("small", null, hint)); lb.append(cb, sp); t.append(lb); }); });
-  $("taskTxt").textContent = done + " of " + total + " done"; $("taskBar").style.width = (done / total * 100) + "%";
+  if (!recent.length) lt.append(el("p", "muted", "No replies yet. They show up here as guests RSVP."));
+  recent.forEach(p => { const r = el("div"); const nm = el("span", null, nameOf(p));
+    if (p.company) nm.append(el("span", "muted", " · " + p.company));
+    r.append(nm, status(p, true)); lt.append(r); });
 }
 
-function pill(p) {
-  if (p.arrived) return el("span", "pill here", "Here");
-  if (p.reply === "yes") return el("span", "pill yes", "Attending");
-  if (p.reply === "no") return el("span", "pill no", "Declined");
-  return el("span", "pill wait", p.sent ? "No reply" : "Not invited");
+const GF = [["all", "All"], ["yes", "Coming"], ["wait", "No reply"], ["no", "Can't make it"], ["uninvited", "Not invited"], ["here", "Here"]];
+function gTest(p, f) {
+  switch (f) { case "yes": return p.reply === "yes"; case "no": return p.reply === "no"; case "wait": return !p.reply && !!p.sent;
+    case "uninvited": return p.onList && !p.sent; case "here": return !!p.arrived; default: return true; }
 }
-
-const GF = [["all", "All"], ["yes", "Attending"], ["no", "Declined"], ["wait", "No reply"], ["uninvited", "Not invited"], ["here", "Checked in"]];
 function gMatch(p) {
   const q = lc($("gq").value);
   if (q && !lc([p.first, p.last, p.email, p.company, p.role].join(" ")).includes(q)) return false;
-  switch (gFilter) { case "yes": return p.reply === "yes"; case "no": return p.reply === "no"; case "wait": return !p.reply && !!p.sent;
-    case "uninvited": return p.onList && !p.sent; case "here": return !!p.arrived; default: return true; }
+  return gTest(p, gFilter);
 }
 function renderGuests(P) {
+  $("gCount").textContent = P.length;
   const f = $("gfilters"); f.textContent = "";
-  GF.forEach(([k, l]) => { const b = el("button", "chip", l + " " + P.filter(p => { const s = gFilter; gFilter = k; const r = gMatchNoQ(p); gFilter = s; return r; }).length);
-    b.type = "button"; b.setAttribute("aria-pressed", String(gFilter === k)); b.onclick = () => { gFilter = k; renderGuests(people()); }; f.append(b); });
+  GF.forEach(([k, l]) => { const n = P.filter(p => gTest(p, k)).length; if (!n && k !== "all" && gFilter !== k) return;
+    const b = el("button", null, l + " · " + n); b.type = "button"; b.setAttribute("aria-pressed", String(gFilter === k));
+    b.onclick = () => { gFilter = k; renderGuests(people()); }; f.append(b); });
   const rows = P.filter(gMatch), tb = $("gbody"); tb.textContent = "";
-  if (!rows.length) { const tr = el("tr"); const td = el("td", "empty", P.length ? "No guests match." : "No guests yet. Add guests or paste a list from Excel."); td.colSpan = 8; tr.append(td); tb.append(tr); }
+  if (!rows.length) { const tr = el("tr"); const td = el("td", "empty", P.length ? "No guests match." : "No guests yet. Use Add guests to type them in or paste a list from Excel."); td.colSpan = 6; tr.append(td); tb.append(tr); }
   rows.forEach(p => {
-    const tr = el("tr");
-    const c0 = el("td", "sel"); if (p.email && p.onList) { const cb = el("input"); cb.type = "checkbox"; cb.checked = sel.has(lc(p.email)); cb.setAttribute("aria-label", "Select " + nameOf(p));
-      cb.onchange = () => { cb.checked ? sel.add(lc(p.email)) : sel.delete(lc(p.email)); selbar(); }; c0.append(cb); }
-    const c1 = el("td"); c1.append(el("span", "nm", nameOf(p)), el("span", "sub", p.email || "no email"));
+    const picked = !!(p.email && sel.has(lc(p.email)));
+    const tr = el("tr", picked ? "on" : null);
+    const c0 = el("td"); if (p.email && p.onList) { const cb = el("input"); cb.type = "checkbox"; cb.checked = picked; cb.setAttribute("aria-label", "Select " + nameOf(p));
+      cb.onchange = () => { cb.checked ? sel.add(lc(p.email)) : sel.delete(lc(p.email)); tr.className = cb.checked ? "on" : ""; selbar(); }; c0.append(cb); }
+    const c1 = el("td"); c1.append(el("span", "nm", nameOf(p)), el("span", "sub", p.email || "No email"));
+    if (p.notes) c1.append(el("span", "sub", p.notes));
     const c2 = el("td"); c2.append(document.createTextNode(p.company || "")); if (p.role) c2.append(el("span", "sub", p.role));
-    const c3 = el("td"); c3.append(p.reply ? pill(Object.assign({}, p, { arrived: "" })) : el("span", "pill wait", "—")); if (p.replied) c3.append(el("span", "sub", dateStr(p.replied)));
-    const c4 = el("td"); if (p.sent) { c4.append(el("span", "pill inv", "Sent " + dateStr(p.sent))); if (p.reminded) c4.append(el("span", "sub", "Reminded " + dateStr(p.reminded))); }
-      else c4.append(el("span", "sub", p.onList ? "Not sent" : "RSVP'd directly"));
-    const c5 = el("td"); if (p.arrived) { c5.append(el("span", "pill here", timeStr(new Date(p.arrived)))); if (p.walkin) c5.append(el("span", "sub", "Walk-in")); }
-    const c6 = el("td"); c6.append(el("span", "sub", p.notes || ""));
-    const c7 = el("td"); if (p.onList && p.email) { const x = el("button", "btn ghost sm", "Remove"); x.type = "button";
-      x.onclick = async () => { if (!await confirmBox("Remove guest?", "Remove " + nameOf(p) + " from the guest list? Their RSVP (if any) stays in the RSVPs tab.")) return;
-        try { await apiPost("removeGuest", { email: p.email }); sel.delete(lc(p.email)); toast("Removed " + nameOf(p) + "."); } catch (e) { toast("That didn't save. Try again."); } }; c7.append(x); }
-    tr.append(c0, c1, c2, c3, c4, c5, c6, c7); tb.append(tr);
+    const c3 = el("td"); c3.append(status(p)); if (p.replied) c3.append(el("span", "sub", "Replied " + dateStr(p.replied)));
+    const c4 = el("td"); c4.append(el("span", "sub", p.sent ? "Sent " + dateStr(p.sent) + (p.reminded ? " · reminded " + dateStr(p.reminded) : "") : p.onList ? "Not sent" : "RSVP'd directly"));
+    const c5 = el("td");
+    if (p.onList && p.email) {
+      const d = el("details", "menu"); const s = el("summary"); s.setAttribute("aria-label", "More actions for " + nameOf(p));
+      s.innerHTML = '<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>';
+      const pop = el("div", "pop"); const x = el("button", null, "Remove from list"); x.type = "button";
+      x.onclick = async () => { d.open = false; if (!await confirmBox("Remove guest?", "Remove " + nameOf(p) + " from the guest list? Their RSVP, if any, stays in the RSVPs tab.")) return;
+        try { await apiPost("removeGuest", { email: p.email }); sel.delete(lc(p.email)); toast("Removed " + nameOf(p) + "."); } catch (e) { toast("That didn't save. Try again."); } };
+      pop.append(x); d.append(s, pop); c5.append(d);
+    }
+    tr.append(c0, c1, c2, c3, c4, c5); tb.append(tr);
   });
   const shown = rows.filter(p => p.email && p.onList);
   $("selAll").checked = shown.length > 0 && shown.every(p => sel.has(lc(p.email)));
   $("selAll").onchange = () => { shown.forEach(p => $("selAll").checked ? sel.add(lc(p.email)) : sel.delete(lc(p.email))); renderGuests(people()); };
   selbar();
 }
-function gMatchNoQ(p) { const q = $("gq").value; $("gq").value = ""; const r = gMatch(p); $("gq").value = q; return r; }
 function selbar() { $("selbar").hidden = !sel.size; $("selN").textContent = sel.size + " selected"; }
 
-const CF = [["expected", "Expected"], ["here", "Checked in"], ["waiting", "Not here yet"], ["walkin", "Walk-ins"], ["all", "Everyone"]];
+const CF = [["expected", "Coming"], ["waiting", "Not here yet"], ["here", "Here"], ["walkin", "Walk-ins"], ["all", "Everyone"]];
 function renderCheckin(P) {
+  const coming = P.filter(p => p.reply === "yes").length;
   const expected = P.filter(p => p.reply === "yes" || p.arrived);
   const here = P.filter(p => p.arrived).length;
-  $("ciHere").textContent = here; $("ciOf").textContent = "of " + P.filter(p => p.reply === "yes").length + " expected";
-  $("ciBar").style.width = Math.min(100, here / Math.max(1, P.filter(p => p.reply === "yes").length) * 100) + "%";
+  $("ciHere").textContent = here; $("ciOf").textContent = "of " + coming + " here";
+  $("ciBar").style.width = Math.min(100, here / Math.max(1, coming) * 100) + "%";
+  $("ciBarWrap").setAttribute("aria-label", here + " of " + coming + " checked in");
   const f = $("cifilters"); f.textContent = "";
-  CF.forEach(([k, l]) => { const b = el("button", "chip", l); b.type = "button"; b.setAttribute("aria-pressed", String(ciFilter === k)); b.onclick = () => { ciFilter = k; renderCheckin(people()); }; f.append(b); });
+  CF.forEach(([k, l]) => { const b = el("button", null, l); b.type = "button"; b.setAttribute("aria-pressed", String(ciFilter === k)); b.onclick = () => { ciFilter = k; renderCheckin(people()); }; f.append(b); });
   const q = lc($("ciq").value);
   let list = q ? P : ciFilter === "all" ? P : ciFilter === "here" ? P.filter(p => p.arrived) : ciFilter === "waiting" ? expected.filter(p => !p.arrived) : ciFilter === "walkin" ? P.filter(p => p.walkin) : expected;
   if (q) list = list.filter(p => lc([p.first, p.last, p.email, p.company].join(" ")).includes(q));
   list = list.slice().sort((a, b) => (!!a.arrived - !!b.arrived) || lc(a.last + a.first).localeCompare(lc(b.last + b.first)));
   const box = $("cilist"); box.textContent = "";
-  if (!list.length) box.append(el("p", "empty", q ? "No one matches. Use + Walk-in to add them." : "No guests here yet."));
+  if (!list.length) box.append(el("p", "empty", q ? "No one matches. Use Add walk-in to add them." : "No one here yet."));
   list.forEach(p => {
-    const b = el("button", "ci" + (p.arrived ? " here" : "")); b.type = "button";
-    const l = el("div"); l.append(el("span", "nm", nameOf(p)), el("span", "sub", [p.company, p.reply === "yes" ? "RSVP yes" : p.reply === "no" ? "RSVP no" : "No RSVP"].filter(Boolean).join(" · ")));
-    b.append(l, el("span", "act", p.arrived ? "Here " + timeStr(new Date(p.arrived)) : "Check in"));
-    b.onclick = async () => {
-      if (p.arrived) { if (!await confirmBox("Undo check-in?", "Mark " + nameOf(p) + " as not here?")) return;
-        try { await apiPost("undoCheckIn", { email: p.email || p.key }); } catch (e) { toast("That didn't save. Try again."); } return; }
-      p.arrived = new Date().toISOString(); renderCheckin(people().map(x => x.key === p.key ? p : x));
-      try { const r = await apiPost("checkIn", { email: p.email || p.key, name: nameOf(p), company: p.company || "" }); toast(r === "already" ? nameOf(p) + " was already checked in." : nameOf(p) + " is checked in."); $("ciq").value = ""; renderCheckin(people()); }
-      catch (e) { toast("Check-in didn't save. Tap again."); load(true); }
-    };
-    box.append(b);
+    const row = el("div", "ci");
+    const l = el("div"); l.append(el("span", "nm", nameOf(p)), el("span", "sub", [p.company, p.reply === "yes" ? "" : p.reply === "no" ? "Said they can't make it" : "Didn't RSVP"].filter(Boolean).join(" · ")));
+    row.append(l);
+    if (p.arrived) {
+      const r = el("div", "here"); r.append(status(p));
+      const u = el("button", "btn text", "Undo"); u.type = "button"; u.setAttribute("aria-label", "Undo check-in for " + nameOf(p));
+      u.onclick = async () => { try { await apiPost("undoCheckIn", { email: p.email || p.key }); toast(nameOf(p) + " is no longer checked in."); } catch (e) { toast("That didn't save. Try again."); } };
+      r.append(u); row.append(r);
+    } else {
+      const b = el("button", "btn big", "Check in"); b.type = "button"; b.setAttribute("aria-label", "Check in " + nameOf(p));
+      b.onclick = async () => {
+        b.disabled = true; p.arrived = new Date().toISOString(); renderCheckin(people().map(x => x.key === p.key ? p : x));
+        try { const r = await apiPost("checkIn", { email: p.email || p.key, name: nameOf(p), company: p.company || "" }); toast(r === "already" ? nameOf(p) + " was already checked in." : nameOf(p) + " is checked in."); $("ciq").value = ""; renderCheckin(people()); }
+        catch (e) { toast("Check-in didn't save. Tap again."); load(true); }
+      };
+      row.append(b);
+    }
+    box.append(row);
   });
 }
 
 function renderSend(P) {
-  $("sUnsent").textContent = P.filter(p => p.onList && p.email && !p.sent).length;
-  $("sRemind").textContent = P.filter(p => p.onList && p.sent && !p.reminded && !p.reply).length;
-  $("sQuota").textContent = D.quota;
+  const u = unsentOf(P).length, r = remindOf(P).length;
+  $("sUnsent").textContent = u; $("sRemind").textContent = r; $("sQuota").textContent = D.quota;
+  $("sendUnsent").disabled = !u; $("sendRemind").disabled = !r;
   const s = D.settings, on = /^on$/i.test(s["Automatic sending"]);
-  $("autoTxt").textContent = on ? "On. Invites send after " + (dtStr(s["Send invites on"]) || "(no date set)") + "; reminders after " + (dtStr(s["Send reminders on"]) || "(no date set)") + "." : "Off.";
+  $("autoTxt").textContent = on ? "On. Invitations go out after " + (dtStr(s["Send invites on"]) || "(no date set)") + "; reminders after " + (dtStr(s["Send reminders on"]) || "(no date set)") + "." : "Off. Emails only go out when you press a button above.";
 }
 
 const SETF = [["Invite link", "url", "Your GitHub invite page"], ["Envelope image link", "url", "Image shown in the email"], ["Email subject", "text", ""], ["Reminder subject", "text", ""],
@@ -564,19 +635,23 @@ const SETF = [["Invite link", "url", "Your GitHub invite page"], ["Envelope imag
 function renderSettings() {
   const box = $("setFields"); if (box.dataset.done && document.activeElement && box.contains(document.activeElement)) return;
   box.textContent = ""; box.dataset.done = "1";
-  SETF.forEach(([k, type, ph], i) => { const l = el("label", "f"); const sp = el("span", null, k); const inp = el("input"); inp.type = type; inp.id = "set" + i; inp.value = D.settings[k] || ""; inp.placeholder = ph; inp.dataset.k = k; l.append(sp, inp); box.append(l); });
+  SETF.forEach(([k, type, ph], i) => { const l = el("label", "f"); const inp = el("input"); inp.type = type; inp.id = "set" + i; inp.value = D.settings[k] || ""; inp.placeholder = ph; inp.dataset.k = k; l.append(el("span", null, k), inp); box.append(l); });
   const link = D.settings["Invite link"] || ""; $("lnkInvite").textContent = link || "(not set)"; $("lnkInvite").href = /^https?:/.test(link) ? link : "#";
 }
 
 /* ---------- views ---------- */
 function show(v) {
-  view = v; document.querySelectorAll(".tab").forEach(t => t.setAttribute("aria-selected", String(t.dataset.v === v)));
+  view = v; document.querySelectorAll(".nav[data-v]").forEach(t => t.dataset.v === v ? t.setAttribute("aria-current", "page") : t.removeAttribute("aria-current"));
   ["overview", "guests", "checkin", "send", "settings"].forEach(x => $("v-" + x).hidden = x !== v);
   try { sessionStorage.setItem("ss_view", v); } catch (e) {}
   clearInterval(poll); poll = setInterval(() => { if (!busy && !document.hidden && !document.querySelector("dialog[open]")) load(true); }, v === "checkin" ? 15000 : 60000);
   if (v === "checkin") setTimeout(() => $("ciq").focus(), 50);
+  window.scrollTo(0, 0);
 }
-document.querySelectorAll(".tab").forEach(t => t.onclick = () => show(t.dataset.v));
+document.querySelectorAll(".nav[data-v]").forEach(t => t.onclick = () => show(t.dataset.v));
+document.querySelectorAll("[data-go]").forEach(b => b.onclick = () => show(b.dataset.go));
+$("tasksMore").onclick = () => { tasksAll = !tasksAll; render(); };
+$("homeQ").oninput = () => { const q = $("homeQ").value; $("homeQ").value = ""; gFilter = "all"; $("gq").value = q; show("guests"); renderGuests(people()); $("gq").focus(); };
 
 /* ---------- login ---------- */
 $("loginForm").addEventListener("submit", async e => {
@@ -598,9 +673,10 @@ $("refreshBtn").onclick = () => load();
 $("gq").oninput = () => renderGuests(people());
 $("selClear").onclick = () => { sel.clear(); renderGuests(people()); };
 $("selInvite").onclick = async () => {
-  if (!await confirmBox("Send invites?", "Email the invitation to " + sel.size + " selected guest" + (sel.size === 1 ? "" : "s") + ". Guests who were already invited get it again.")) return;
-  try { const r = await apiPost("sendInvites", { emails: [...sel] }); sel.clear(); renderGuests(people()); toast(sendReport(r, "invite")); } catch (e) { toast(e.message || "Sending failed."); }
+  if (!await confirmBox("Send invitations?", "Email the invitation to " + plural(sel.size, "selected guest") + ". Anyone already invited gets it again.")) return;
+  try { const r = await apiPost("sendInvites", { emails: [...sel] }); sel.clear(); renderGuests(people()); toast(sendReport(r, "invitation")); } catch (e) { toast(e.message || "Sending failed."); }
 };
+document.addEventListener("click", e => { document.querySelectorAll("details.menu[open]").forEach(d => { if (!d.contains(e.target)) d.open = false; }); });
 let addMode = "one";
 document.querySelectorAll("#addForm [data-m]").forEach(b => b.onclick = () => { addMode = b.dataset.m; document.querySelectorAll("#addForm [data-m]").forEach(x => x.setAttribute("aria-pressed", String(x === b))); $("addOne").hidden = addMode !== "one"; $("addPaste").hidden = addMode !== "paste"; });
 $("addBtn").onclick = () => { $("addMsg").textContent = ""; $("addDlg").showModal(); };
@@ -647,16 +723,16 @@ $("walkSave").onclick = async () => {
 };
 
 /* ---------- send actions ---------- */
-function sendReport(r, what) { if (!r) return "Done."; if (!r.sent && r.note) return r.note; return "Sent " + r.sent + " " + what + (r.sent === 1 ? "" : "s") + "." + (r.skipped ? " Skipped " + r.skipped + "." : "") + (r.note ? " " + r.note : ""); }
+function sendReport(r, what) { if (!r) return "Done."; if (!r.sent && r.note) return r.note; return "Sent " + plural(r.sent, what) + "." + (r.skipped ? " Skipped " + r.skipped + "." : "") + (r.note ? " " + r.note : ""); }
 async function runSend(btn, action, title, body, what) {
   if (!await confirmBox(title, body)) return;
   btn.disabled = true; $("sMsg").className = "msg"; $("sMsg").textContent = "Sending… this can take a minute for a long list.";
   try { const r = await apiPost(action); $("sMsg").className = "msg ok"; $("sMsg").textContent = sendReport(r, what); }
   catch (e) { $("sMsg").className = "msg err"; $("sMsg").textContent = e.message || "Sending failed."; }
-  finally { btn.disabled = false; }
+  finally { btn.disabled = false; render(); }
 }
-$("sendUnsent").onclick = () => runSend($("sendUnsent"), "sendUnsent", "Send invites?", "Email the invitation to " + $("sUnsent").textContent + " guest(s) who haven't been invited yet.", "invite");
-$("sendRemind").onclick = () => runSend($("sendRemind"), "sendReminders", "Send reminders?", "Email one reminder to " + $("sRemind").textContent + " invited guest(s) who haven't replied.", "reminder");
+$("sendUnsent").onclick = () => runSend($("sendUnsent"), "sendUnsent", "Send invitations?", "Email the invitation to " + plural(+$("sUnsent").textContent, "guest") + " who haven't been invited yet.", "invitation");
+$("sendRemind").onclick = () => runSend($("sendRemind"), "sendReminders", "Send reminders?", "Email one reminder to " + plural(+$("sRemind").textContent, "invited guest") + " who haven't replied.", "reminder");
 $("sendTest").onclick = async () => { const to = $("testTo").value.trim(); $("sendTest").disabled = true;
   try { const r = await apiPost("sendTest", { to }); $("sMsg").className = "msg ok"; $("sMsg").textContent = "Test sent to " + r.to + "."; }
   catch (e) { $("sMsg").className = "msg err"; $("sMsg").textContent = e.message || "Test failed."; }

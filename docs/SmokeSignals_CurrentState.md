@@ -33,7 +33,7 @@ Event is **Wed Nov 4 2026** — two weeks out as of 2026-10-21. Next-session can
 | `ADMIN_PASSWORD` in Script Properties | Done (owner) |
 | Deployment `AKfycby2Ftp…960` ("Testv1") | Version 3 live — wrong key returns `unauthorized` JSON, no doGet crash |
 | `RSVP_URL` / `API_URL` in HTML | Wired to v3 `/exec` (2026-10-21); back-office login verified by owner |
-| Back office | **Moved into Apps Script** (v4, 2026-10-21): open the `/exec` link. Wrong-password round trip verified; owner to verify real login. Then delete `admin.html` + legacy `?key=` branch in `doGet` |
+| Back office | **Moved into Apps Script**, redesigned (v5, 2026-10-21). Login verified by owner on v4: open the `/exec` link. Wrong-password round trip verified; owner to verify real login. Then delete `admin.html` + legacy `?key=` branch in `doGet` |
 | GitHub Pages | Live: `https://bnamarketing.github.io/B-A-Smoke-Signals-Event-/` (+ `/admin.html`) |
 | `admin.html` insignia | Points at the image repo's Pages URL (no `assets/` folder in this repo) |
 | Settings tab links | Unknown — check the Sheet |
@@ -59,5 +59,6 @@ Event is **Wed Nov 4 2026** — two weeks out as of 2026-10-21. Next-session can
 
 | Date | Session | Outcome |
 |---|---|---|
+| 2026-10-21 | Back office redesign | `Admin.html` reskinned to the "A refined" clean-console design (sidebar, one "Do this next" action picked from the data, plain status words, big check-in buttons, phone top bar). Same IDs/server calls. Home tab one-time function `setupHomeTab` added. Deployed v5. Mockups: claude.ai/artifact/EGeWVMDc2dNbhcVMNMcRoH |
 | 2026-10-21 | Standalone back office | Back office served by Apps Script (`Admin.html` + `adminApi`); Sheet-menu functions guarded with `sheetOnly_()`; login lockout. Deployed v4. |
 | 2026-10-21 | Claude Code setup | Added CLAUDE.md + docs; backend into `apps-script/` via clasp; admin password moved to Script Properties; clasp repointed to the Sheet-bound script; deployment updated to v3. |
