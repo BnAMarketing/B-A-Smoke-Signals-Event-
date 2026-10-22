@@ -126,7 +126,8 @@ main.views{flex:1;min-width:0;padding:28px 48px 64px 24px;max-width:1080px}
 .tablewrap{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);overflow-x:auto}
 table{width:100%;border-collapse:collapse;min-width:680px}
 th{text-align:left;font-size:13px;font-weight:500;color:var(--muted);padding:14px 8px;white-space:nowrap}
-th:first-child,td:first-child{padding-left:20px;width:28px}
+th:first-child,td:first-child{padding-left:20px}
+#v-guests th:first-child,#v-guests td:first-child{width:28px}
 th:last-child,td:last-child{padding-right:16px;width:48px}
 td{padding:12px 8px;border-top:1px solid #EEF0F3;vertical-align:middle}
 tr.on td{background:#F5F8FC}
@@ -219,6 +220,8 @@ dialog::backdrop{background:rgba(16,24,40,.45)}
       <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/></svg>Home</button>
     <button class="nav" type="button" data-v="guests">
       <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-6 7-6s7 2 7 6"/></svg>Guests<span class="n" id="nGuests">0</span></button>
+    <button class="nav" type="button" data-v="rsvps">
+      <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1.1-4.6A8 8 0 1 1 21 12z"/><path d="M9 12l2 2 4-4"/></svg>RSVPs<span class="n" id="nRsvps">0</span></button>
     <button class="nav" type="button" data-v="checkin">
       <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/></svg>Check-in<span class="n" id="nHere">0</span></button>
     <button class="nav" type="button" data-v="send">
@@ -250,7 +253,7 @@ dialog::backdrop{background:rgba(16,24,40,.45)}
           <button class="btn text sm" type="button" id="tasksMore" style="margin-top:8px"></button>
         </section>
         <section aria-labelledby="hLatest">
-          <div class="row between" style="margin-bottom:4px"><h2 id="hLatest">New replies</h2><button class="btn text sm" type="button" data-go="guests">See all</button></div>
+          <div class="row between" style="margin-bottom:4px"><h2 id="hLatest">New replies</h2><button class="btn text sm" type="button" data-go="rsvps">See all</button></div>
           <div class="list" id="latest"></div>
         </section>
       </div>
@@ -259,7 +262,7 @@ dialog::backdrop{background:rgba(16,24,40,.45)}
     <!-- guests -->
     <section class="view" id="v-guests" hidden>
       <div class="head">
-        <h1>Guests<span class="c" id="gCount"></span></h1>
+        <div><h1>Guests<span class="c" id="gCount"></span></h1><p class="muted">Your invite list. Add guests here and see who still needs an email.</p></div>
         <div class="row">
           <button class="btn text" type="button" id="csvBtn">CSV</button>
           <button class="btn ghost" type="button" id="xlsxBtn">Download Excel</button>
@@ -278,10 +281,32 @@ dialog::backdrop{background:rgba(16,24,40,.45)}
         <button class="btn danger sm" type="button" id="selDelete">Delete</button>
         <button class="btn text sm" type="button" id="selClear">Clear</button></div>
       <div class="tablewrap"><table>
-        <thead><tr><th><input type="checkbox" id="selAll" aria-label="Select all shown"></th><th>Name</th><th>Organization</th><th>Status</th><th>Invite</th><th><span class="sr">Actions</span></th></tr></thead>
+        <thead><tr><th><input type="checkbox" id="selAll" aria-label="Select all shown"></th><th>Name</th><th>Organization</th><th>Email status</th><th><span class="sr">Actions</span></th></tr></thead>
         <tbody id="gbody"></tbody>
       </table></div>
       <p class="msg" id="gMsg" role="status"></p>
+    </section>
+
+    <!-- rsvps -->
+    <section class="view" id="v-rsvps" hidden>
+      <div class="head">
+        <div><h1>RSVPs<span class="c" id="rCount"></span></h1><p class="muted">Every reply from the invite page, newest first.</p></div>
+        <div class="row">
+          <button class="btn text" type="button" id="rCsvBtn">CSV</button>
+          <button class="btn ghost" type="button" id="rXlsxBtn">Download Excel</button>
+        </div>
+      </div>
+      <div class="head">
+        <div class="seg" id="rfilters" role="group" aria-label="Show"></div>
+        <label class="search" style="flex:0 1 320px">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B6470" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.5-4.5"/></svg>
+          <span class="sr">Search RSVPs</span><input type="search" id="rq" placeholder="Search name, email or company">
+        </label>
+      </div>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Name</th><th>Organization</th><th>Reply</th><th>Replied</th><th><span class="sr">Actions</span></th></tr></thead>
+        <tbody id="rbody"></tbody>
+      </table></div>
     </section>
 
     <!-- check-in -->
@@ -399,12 +424,12 @@ const TASKS = [
   ["Event day", [
     ["headcount", "Final headcount sent to the venue", ""],
     ["device", "Check-in device charged and signed in", "Phone or tablet at the door"],
-    ["printed", "Backup printed guest list", "Download Excel from Guests"]]]
+    ["printed", "Backup printed guest list", "Download Excel from RSVPs"]]]
 ];
 
 const $ = id => document.getElementById(id);
 const el = (t, c, txt) => { const e = document.createElement(t); if (c) e.className = c; if (txt != null) e.textContent = txt; return e; };
-let KEY = "", D = null, view = "overview", gFilter = "all", ciFilter = "expected", sel = new Set(), busy = 0, poll = null, tasksAll = false;
+let KEY = "", D = null, view = "overview", gFilter = "all", ciFilter = "expected", rFilter = "all", sel = new Set(), busy = 0, poll = null, tasksAll = false;
 
 /* ---------- storage (per device convenience only) ---------- */
 const store = {
@@ -488,9 +513,9 @@ function render() {
   const P = people();
   const att = P.filter(p => p.reply === "yes").length, dec = P.filter(p => p.reply === "no").length;
   const noReply = P.filter(p => p.onList && !p.reply).length, here = P.filter(p => p.arrived).length;
-  $("nGuests").textContent = P.length; $("nHere").textContent = here;
+  $("nGuests").textContent = P.filter(p => p.onList).length; $("nRsvps").textContent = P.filter(p => p.reply).length; $("nHere").textContent = here;
   renderHome(P, { att, dec, noReply, here });
-  renderGuests(P); renderCheckin(P); renderSend(P); renderSettings();
+  renderGuests(P); renderRsvps(P); renderCheckin(P); renderSend(P); renderSettings();
 }
 
 function renderHome(P, k) {
@@ -541,24 +566,35 @@ function renderHome(P, k) {
     r.append(nm, status(p, true)); lt.append(r); });
 }
 
-const GF = [["all", "All"], ["yes", "Coming"], ["wait", "No reply"], ["no", "Can't make it"], ["uninvited", "Not invited"], ["here", "Here"]];
-function gTest(p, f) {
-  switch (f) { case "yes": return p.reply === "yes"; case "no": return p.reply === "no"; case "wait": return !p.reply && !!p.sent;
-    case "uninvited": return p.onList && !p.sent; case "here": return !!p.arrived; default: return true; }
+/* Guests = the invite list: where each listed guest is in the email flow */
+const GF = [["all", "All"], ["invite", "Needs invite"], ["remind", "Needs reminder"], ["waiting", "Reminded"], ["replied", "Replied"]];
+function emailStage(p) { return p.reply ? "replied" : !p.sent ? "invite" : !p.reminded ? "remind" : "waiting"; }
+function emailStatus(p) {
+  const st = emailStage(p);
+  if (st === "replied") return el("span", "st yes", "Replied");
+  if (st === "invite") return el("span", "st new", "Needs invite");
+  if (st === "remind") return el("span", "st wait", "Needs reminder");
+  return el("span", "st", "Reminded, no reply yet");
 }
-function gMatch(p) {
-  const q = lc($("gq").value);
-  if (q && !lc([p.first, p.last, p.email, p.company, p.role].join(" ")).includes(q)) return false;
-  return gTest(p, gFilter);
+const textMatch = (p, q) => !q || lc([p.first, p.last, p.email, p.company, p.role].join(" ")).includes(q);
+function gMatch(p) { return p.onList && textMatch(p, lc($("gq").value)) && (gFilter === "all" || emailStage(p) === gFilter); }
+function rowMenu(p) {
+  const d = el("details", "menu"); const s = el("summary"); s.setAttribute("aria-label", "More actions for " + nameOf(p));
+  s.innerHTML = '<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>';
+  const pop = el("div", "pop"); const x = el("button", null, "Delete guest"); x.type = "button";
+  x.onclick = () => { d.open = false; deleteKeys([p.key], nameOf(p)); };
+  pop.append(x); d.append(s, pop); return d;
 }
 function renderGuests(P) {
-  $("gCount").textContent = P.length;
+  const L = P.filter(p => p.onList);
+  $("gCount").textContent = L.length;
   const f = $("gfilters"); f.textContent = "";
-  GF.forEach(([k, l]) => { const n = P.filter(p => gTest(p, k)).length; if (!n && k !== "all" && gFilter !== k) return;
+  GF.forEach(([k, l]) => { const n = k === "all" ? L.length : L.filter(p => emailStage(p) === k).length; if (!n && k !== "all" && gFilter !== k) return;
     const b = el("button", null, l + " · " + n); b.type = "button"; b.setAttribute("aria-pressed", String(gFilter === k));
     b.onclick = () => { gFilter = k; renderGuests(people()); }; f.append(b); });
-  const rows = P.filter(gMatch), tb = $("gbody"); tb.textContent = "";
-  if (!rows.length) { const tr = el("tr"); const td = el("td", "empty", P.length ? "No guests match." : "No guests yet. Use Add guests to type them in or paste a list from Excel."); td.colSpan = 6; tr.append(td); tb.append(tr); }
+  const order = { invite: 0, remind: 1, waiting: 2, replied: 3 };  // who still needs an email comes first
+  const rows = L.filter(gMatch).sort((a, b) => order[emailStage(a)] - order[emailStage(b)] || lc(a.first + a.last).localeCompare(lc(b.first + b.last))), tb = $("gbody"); tb.textContent = "";
+  if (!rows.length) { const tr = el("tr"); const td = el("td", "empty", L.length ? "No guests match." : "No guests yet. Use Add guests to type them in or paste a list from Excel."); td.colSpan = 5; tr.append(td); tb.append(tr); }
   rows.forEach(p => {
     const picked = sel.has(p.key);
     const tr = el("tr", picked ? "on" : null);
@@ -567,21 +603,37 @@ function renderGuests(P) {
     const c1 = el("td"); c1.append(el("span", "nm", nameOf(p)), el("span", "sub", p.email || "No email"));
     if (p.notes) c1.append(el("span", "sub", p.notes));
     const c2 = el("td"); c2.append(document.createTextNode(p.company || "")); if (p.role) c2.append(el("span", "sub", p.role));
-    const c3 = el("td"); c3.append(status(p)); if (p.replied) c3.append(el("span", "sub", "Replied " + dateStr(p.replied)));
-    const c4 = el("td"); c4.append(el("span", "sub", p.sent ? "Sent " + dateStr(p.sent) + (p.reminded ? " · reminded " + dateStr(p.reminded) : "") : p.onList ? "Not sent" : "RSVP'd directly"));
-    const c5 = el("td");
-    {
-      const d = el("details", "menu"); const s = el("summary"); s.setAttribute("aria-label", "More actions for " + nameOf(p));
-      s.innerHTML = '<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>';
-      const pop = el("div", "pop"); const x = el("button", null, "Delete guest"); x.type = "button";
-      x.onclick = () => { d.open = false; deleteKeys([p.key], nameOf(p)); };
-      pop.append(x); d.append(s, pop); c5.append(d);
-    }
-    tr.append(c0, c1, c2, c3, c4, c5); tb.append(tr);
+    const c3 = el("td"); c3.append(emailStatus(p));
+    if (p.sent) c3.append(el("span", "sub", "Invited " + dateStr(p.sent) + (p.reminded ? " · reminded " + dateStr(p.reminded) : "")));
+    const c4 = el("td"); c4.append(rowMenu(p));
+    tr.append(c0, c1, c2, c3, c4); tb.append(tr);
   });
   $("selAll").checked = rows.length > 0 && rows.every(p => sel.has(p.key));
   $("selAll").onchange = () => { rows.forEach(p => $("selAll").checked ? sel.add(p.key) : sel.delete(p.key)); renderGuests(people()); };
   selbar();
+}
+
+/* RSVPs = replies only, including people who RSVP'd without being on the list */
+const RF = [["all", "All replies"], ["yes", "Coming"], ["no", "Can't make it"]];
+function rMatch(p) { return !!p.reply && textMatch(p, lc($("rq").value)) && (rFilter === "all" || p.reply === rFilter); }
+function renderRsvps(P) {
+  const R = P.filter(p => p.reply);
+  $("rCount").textContent = R.length;
+  const f = $("rfilters"); f.textContent = "";
+  RF.forEach(([k, l]) => { const n = k === "all" ? R.length : R.filter(p => p.reply === k).length;
+    const b = el("button", null, l + " · " + n); b.type = "button"; b.setAttribute("aria-pressed", String(rFilter === k));
+    b.onclick = () => { rFilter = k; renderRsvps(people()); }; f.append(b); });
+  const rows = R.filter(rMatch), tb = $("rbody"); tb.textContent = "";
+  if (!rows.length) { const tr = el("tr"); const td = el("td", "empty", R.length ? "No replies match." : "No replies yet. They show up here as guests RSVP on the invite."); td.colSpan = 5; tr.append(td); tb.append(tr); }
+  rows.forEach(p => {
+    const tr = el("tr");
+    const c1 = el("td"); c1.append(el("span", "nm", nameOf(p)), el("span", "sub", p.email || ""));
+    const c2 = el("td"); c2.append(document.createTextNode(p.company || "")); if (p.role) c2.append(el("span", "sub", p.role));
+    const c3 = el("td"); c3.append(status(p, true)); if (!p.onList) c3.append(el("span", "sub", "Not on the guest list"));
+    const c4 = el("td"); c4.append(el("span", "sub", dtStr(p.replied)));
+    const c5 = el("td"); c5.append(rowMenu(p));
+    tr.append(c1, c2, c3, c4, c5); tb.append(tr);
+  });
 }
 function selbar() { $("selbar").hidden = !sel.size; $("selN").textContent = sel.size + " selected"; }
 
@@ -643,7 +695,7 @@ function renderSettings() {
 /* ---------- views ---------- */
 function show(v) {
   view = v; document.querySelectorAll(".nav[data-v]").forEach(t => t.dataset.v === v ? t.setAttribute("aria-current", "page") : t.removeAttribute("aria-current"));
-  ["overview", "guests", "checkin", "send", "settings"].forEach(x => $("v-" + x).hidden = x !== v);
+  ["overview", "guests", "rsvps", "checkin", "send", "settings"].forEach(x => $("v-" + x).hidden = x !== v);
   try { sessionStorage.setItem("ss_view", v); } catch (e) {}
   clearInterval(poll); poll = setInterval(() => { if (!busy && !document.hidden && !document.querySelector("dialog[open]")) load(true); }, v === "checkin" ? 15000 : 60000);
   if (v === "checkin") setTimeout(() => $("ciq").focus(), 50);
@@ -672,6 +724,7 @@ $("refreshBtn").onclick = () => load();
 
 /* ---------- guests actions ---------- */
 $("gq").oninput = () => renderGuests(people());
+$("rq").oninput = () => renderRsvps(people());
 $("selClear").onclick = () => { sel.clear(); renderGuests(people()); };
 $("selInvite").onclick = async () => {
   const emails = people().filter(p => sel.has(p.key) && p.onList && p.email).map(p => p.email);
@@ -706,20 +759,26 @@ $("addSave").onclick = async () => {
   finally { $("addSave").disabled = false; }
 };
 
-/* exports */
-function exportRows() {
-  const P = people().filter(gMatch);
-  return [["First name", "Last name", "Email", "Company", "Role", "RSVP", "Replied", "Invite sent", "Reminder sent", "Checked in", "Walk-in", "Notes"]].concat(P.map(p => [
-    p.first || "", p.last || "", p.email || "", p.company || "", p.role || "", p.reply === "yes" ? "Attending" : p.reply === "no" ? "Declined" : "",
-    dtStr(p.replied), dtStr(p.sent), dtStr(p.reminded), dtStr(p.arrived), p.walkin ? "Yes" : "", p.notes || ""]));
+/* exports: each screen downloads what it shows */
+const fmtReply = p => p.reply === "yes" ? "Attending" : p.reply === "no" ? "Declined" : "";
+const STAGE = { invite: "Needs invite", remind: "Needs reminder", waiting: "Reminded, no reply", replied: "Replied" };
+function exportRows(kind) {
+  if (kind === "rsvps") return [["First name", "Last name", "Email", "Company", "Role", "RSVP", "Replied", "On guest list", "Checked in"]].concat(people().filter(rMatch).map(p => [
+    p.first || "", p.last || "", p.email || "", p.company || "", p.role || "", fmtReply(p), dtStr(p.replied), p.onList ? "Yes" : "No", dtStr(p.arrived)]));
+  return [["First name", "Last name", "Email", "Company", "Email status", "Invite sent", "Reminder sent", "RSVP", "Notes"]].concat(people().filter(gMatch).map(p => [
+    p.first || "", p.last || "", p.email || "", p.company || "", STAGE[emailStage(p)], dtStr(p.sent), dtStr(p.reminded), fmtReply(p), p.notes || ""]));
 }
-function fname(ext) { return "smoke-signals-guest-list-" + new Date().toISOString().slice(0, 10) + "." + ext; }
+function fname(kind, ext) { return "smoke-signals-" + (kind === "rsvps" ? "rsvps" : "guest-list") + "-" + new Date().toISOString().slice(0, 10) + "." + ext; }
 function save(blob, name) { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }
-$("csvBtn").onclick = () => { const esc = v => { v = String(v); if (/^[=+\-@]/.test(v)) v = "'" + v; return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
-  save(new Blob(["﻿" + exportRows().map(r => r.map(esc).join(",")).join("\r\n")], { type: "text/csv" }), fname("csv")); };
-$("xlsxBtn").onclick = () => { if (!window.XLSX) { $("csvBtn").click(); return; } const d = exportRows(); const ws = XLSX.utils.aoa_to_sheet(d);
-  ws["!cols"] = [14, 16, 30, 24, 22, 12, 16, 16, 16, 16, 8, 30].map(w => ({ wch: w })); ws["!autofilter"] = { ref: "A1:L" + d.length };
-  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Guest list"); XLSX.writeFile(wb, fname("xlsx")); };
+function downloadCsv(kind) { const esc = v => { v = String(v); if (/^[=+\-@]/.test(v)) v = "'" + v; return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+  save(new Blob(["﻿" + exportRows(kind).map(r => r.map(esc).join(",")).join("\r\n")], { type: "text/csv" }), fname(kind, "csv")); }
+function downloadXlsx(kind) { if (!window.XLSX) { downloadCsv(kind); return; } const d = exportRows(kind); const ws = XLSX.utils.aoa_to_sheet(d);
+  ws["!cols"] = d[0].map((h, i) => ({ wch: i === 2 ? 30 : 18 })); ws["!autofilter"] = { ref: "A1:" + String.fromCharCode(64 + d[0].length) + d.length };
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, kind === "rsvps" ? "RSVPs" : "Guest list"); XLSX.writeFile(wb, fname(kind, "xlsx")); }
+$("csvBtn").onclick = () => downloadCsv("guests");
+$("xlsxBtn").onclick = () => downloadXlsx("guests");
+$("rCsvBtn").onclick = () => downloadCsv("rsvps");
+$("rXlsxBtn").onclick = () => downloadXlsx("rsvps");
 
 /* ---------- check-in actions ---------- */
 $("ciq").oninput = () => renderCheckin(people());
