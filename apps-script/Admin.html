@@ -49,6 +49,12 @@ input::placeholder,textarea::placeholder{color:#8A929C}
 .search{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:0 14px;min-height:44px}
 .search input{border:0;padding:0;min-height:0;flex:1;min-width:0;background:transparent;outline:none}
 .search:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accentSoft)}
+.finder{position:relative;min-width:0}
+.results{position:absolute;top:50px;left:0;right:0;z-index:15;background:var(--surface);border-radius:12px;box-shadow:0 8px 24px rgba(16,24,40,.14);padding:6px;display:grid;gap:2px}
+.results button{appearance:none;cursor:pointer;border:0;background:none;text-align:left;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 12px;min-height:48px;border-radius:8px;width:100%}
+.results button:hover,.results button:focus-visible{background:var(--soft)}
+.results .where{font-size:12px;color:var(--muted);white-space:nowrap}
+.results p{padding:12px;margin:0;color:var(--muted);font-size:14px}
 .search svg{flex:none}
 .msg{min-height:1.4em;font-size:14px;color:var(--muted)}
 .msg.err{color:var(--danger);font-weight:500}
@@ -239,10 +245,13 @@ dialog::backdrop{background:rgba(16,24,40,.45)}
     <section class="view" id="v-overview">
       <div class="head">
         <h1 id="hello">Hello</h1>
-        <label class="search" style="flex:0 1 360px">
-          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B6470" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.5-4.5"/></svg>
-          <span class="sr">Find a guest</span><input type="search" id="homeQ" placeholder="Find a guest">
-        </label>
+        <div class="finder" style="flex:0 1 360px">
+          <label class="search">
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5B6470" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.5-4.5"/></svg>
+            <span class="sr">Find a guest</span><input type="search" id="homeQ" placeholder="Find a guest" autocomplete="off" aria-controls="homeRes">
+          </label>
+          <div class="results" id="homeRes" hidden></div>
+        </div>
       </div>
       <section class="glance" id="glance" aria-label="At a glance"></section>
       <section class="card next" id="next" aria-label="Do this next"></section>
@@ -704,7 +713,40 @@ function show(v) {
 document.querySelectorAll(".nav[data-v]").forEach(t => t.onclick = () => show(t.dataset.v));
 document.querySelectorAll("[data-go]").forEach(b => b.onclick = () => show(b.dataset.go));
 $("tasksMore").onclick = () => { tasksAll = !tasksAll; render(); };
-$("homeQ").oninput = () => { const q = $("homeQ").value; $("homeQ").value = ""; gFilter = "all"; $("gq").value = q; show("guests"); renderGuests(people()); $("gq").focus(); };
+/* Home finder: searches everyone (guest list + RSVPs + walk-ins), opens the person on the right screen */
+function openPerson(p) {
+  $("homeQ").value = ""; $("homeRes").hidden = true;
+  const name = p.email || nameOf(p);  // email pins the exact person when names repeat
+  if (p.onList) { gFilter = "all"; $("gq").value = name; show("guests"); renderGuests(people()); }
+  else if (p.reply) { rFilter = "all"; $("rq").value = name; show("rsvps"); renderRsvps(people()); }
+  else { ciFilter = "all"; $("ciq").value = name; show("checkin"); renderCheckin(people()); }
+}
+function renderFinder() {
+  const q = lc($("homeQ").value), box = $("homeRes"); box.textContent = "";
+  if (!q) { box.hidden = true; return; }
+  const hits = people().filter(p => textMatch(p, q)).slice(0, 6);
+  if (!hits.length) box.append(el("p", null, "No one matches “" + $("homeQ").value + "”."));
+  hits.forEach(p => {
+    const b = el("button"); b.type = "button";
+    const l = el("span"); l.append(el("span", "nm", nameOf(p)), el("span", "sub", p.company || p.email || ""));
+    b.append(l, el("span", "where", p.onList ? "Guest list" : p.reply ? "RSVPs" : "Check-in"));
+    b.onclick = () => openPerson(p); box.append(b);
+  });
+  box.hidden = false;
+}
+$("homeQ").oninput = renderFinder;
+$("homeQ").onkeydown = e => {
+  if (e.key === "Enter") { const first = $("homeRes").querySelector("button"); if (first) { e.preventDefault(); first.click(); } }
+  if (e.key === "Escape") { $("homeQ").value = ""; $("homeRes").hidden = true; }
+  if (e.key === "ArrowDown") { const first = $("homeRes").querySelector("button"); if (first) { e.preventDefault(); first.focus(); } }
+};
+$("homeRes").onkeydown = e => {
+  const bs = [...$("homeRes").querySelectorAll("button")], i = bs.indexOf(document.activeElement);
+  if (e.key === "ArrowDown" && i < bs.length - 1) { e.preventDefault(); bs[i + 1].focus(); }
+  if (e.key === "ArrowUp") { e.preventDefault(); (i > 0 ? bs[i - 1] : $("homeQ")).focus(); }
+  if (e.key === "Escape") { $("homeRes").hidden = true; $("homeQ").focus(); }
+};
+document.addEventListener("click", e => { if (!e.target.closest(".finder")) $("homeRes").hidden = true; });
 
 /* ---------- login ---------- */
 $("loginForm").addEventListener("submit", async e => {
