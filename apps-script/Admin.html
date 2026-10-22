@@ -35,6 +35,8 @@ h1,h2,h3,p{margin:0}
 .btn.ghost:hover{background:var(--accentSoft)}
 .btn.text{background:none;color:var(--accent);padding:0 10px}
 .btn.text:hover{background:var(--accentSoft)}
+.btn.danger{background:var(--surface);color:var(--danger);border:1px solid #F3C4BF}
+.btn.danger:hover{background:#FEF3F2}
 .btn.sm{min-height:36px;font-size:14px;padding:0 14px}
 .btn.big{min-height:52px;font-size:16px;padding:0 26px}
 .btn[disabled]{opacity:.55;cursor:not-allowed}
@@ -273,6 +275,7 @@ dialog::backdrop{background:rgba(16,24,40,.45)}
       </div>
       <div class="selbar" id="selbar" hidden><b id="selN" style="font-weight:500">0 selected</b>
         <button class="btn sm" type="button" id="selInvite">Send invite</button>
+        <button class="btn danger sm" type="button" id="selDelete">Delete</button>
         <button class="btn text sm" type="button" id="selClear">Clear</button></div>
       <div class="tablewrap"><table>
         <thead><tr><th><input type="checkbox" id="selAll" aria-label="Select all shown"></th><th>Name</th><th>Organization</th><th>Status</th><th>Invite</th><th><span class="sr">Actions</span></th></tr></thead>
@@ -557,29 +560,27 @@ function renderGuests(P) {
   const rows = P.filter(gMatch), tb = $("gbody"); tb.textContent = "";
   if (!rows.length) { const tr = el("tr"); const td = el("td", "empty", P.length ? "No guests match." : "No guests yet. Use Add guests to type them in or paste a list from Excel."); td.colSpan = 6; tr.append(td); tb.append(tr); }
   rows.forEach(p => {
-    const picked = !!(p.email && sel.has(lc(p.email)));
+    const picked = sel.has(p.key);
     const tr = el("tr", picked ? "on" : null);
-    const c0 = el("td"); if (p.email && p.onList) { const cb = el("input"); cb.type = "checkbox"; cb.checked = picked; cb.setAttribute("aria-label", "Select " + nameOf(p));
-      cb.onchange = () => { cb.checked ? sel.add(lc(p.email)) : sel.delete(lc(p.email)); tr.className = cb.checked ? "on" : ""; selbar(); }; c0.append(cb); }
+    const c0 = el("td"); const cb = el("input"); cb.type = "checkbox"; cb.checked = picked; cb.setAttribute("aria-label", "Select " + nameOf(p));
+    cb.onchange = () => { cb.checked ? sel.add(p.key) : sel.delete(p.key); tr.className = cb.checked ? "on" : ""; selbar(); }; c0.append(cb);
     const c1 = el("td"); c1.append(el("span", "nm", nameOf(p)), el("span", "sub", p.email || "No email"));
     if (p.notes) c1.append(el("span", "sub", p.notes));
     const c2 = el("td"); c2.append(document.createTextNode(p.company || "")); if (p.role) c2.append(el("span", "sub", p.role));
     const c3 = el("td"); c3.append(status(p)); if (p.replied) c3.append(el("span", "sub", "Replied " + dateStr(p.replied)));
     const c4 = el("td"); c4.append(el("span", "sub", p.sent ? "Sent " + dateStr(p.sent) + (p.reminded ? " · reminded " + dateStr(p.reminded) : "") : p.onList ? "Not sent" : "RSVP'd directly"));
     const c5 = el("td");
-    if (p.onList && p.email) {
+    {
       const d = el("details", "menu"); const s = el("summary"); s.setAttribute("aria-label", "More actions for " + nameOf(p));
       s.innerHTML = '<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>';
-      const pop = el("div", "pop"); const x = el("button", null, "Remove from list"); x.type = "button";
-      x.onclick = async () => { d.open = false; if (!await confirmBox("Remove guest?", "Remove " + nameOf(p) + " from the guest list? Their RSVP, if any, stays in the RSVPs tab.")) return;
-        try { await apiPost("removeGuest", { email: p.email }); sel.delete(lc(p.email)); toast("Removed " + nameOf(p) + "."); } catch (e) { toast("That didn't save. Try again."); } };
+      const pop = el("div", "pop"); const x = el("button", null, "Delete guest"); x.type = "button";
+      x.onclick = () => { d.open = false; deleteKeys([p.key], nameOf(p)); };
       pop.append(x); d.append(s, pop); c5.append(d);
     }
     tr.append(c0, c1, c2, c3, c4, c5); tb.append(tr);
   });
-  const shown = rows.filter(p => p.email && p.onList);
-  $("selAll").checked = shown.length > 0 && shown.every(p => sel.has(lc(p.email)));
-  $("selAll").onchange = () => { shown.forEach(p => $("selAll").checked ? sel.add(lc(p.email)) : sel.delete(lc(p.email))); renderGuests(people()); };
+  $("selAll").checked = rows.length > 0 && rows.every(p => sel.has(p.key));
+  $("selAll").onchange = () => { rows.forEach(p => $("selAll").checked ? sel.add(p.key) : sel.delete(p.key)); renderGuests(people()); };
   selbar();
 }
 function selbar() { $("selbar").hidden = !sel.size; $("selN").textContent = sel.size + " selected"; }
@@ -673,9 +674,19 @@ $("refreshBtn").onclick = () => load();
 $("gq").oninput = () => renderGuests(people());
 $("selClear").onclick = () => { sel.clear(); renderGuests(people()); };
 $("selInvite").onclick = async () => {
-  if (!await confirmBox("Send invitations?", "Email the invitation to " + plural(sel.size, "selected guest") + ". Anyone already invited gets it again.")) return;
-  try { const r = await apiPost("sendInvites", { emails: [...sel] }); sel.clear(); renderGuests(people()); toast(sendReport(r, "invitation")); } catch (e) { toast(e.message || "Sending failed."); }
+  const emails = people().filter(p => sel.has(p.key) && p.onList && p.email).map(p => p.email);
+  if (!emails.length) { toast("None of the selected people are on the invite list with an email."); return; }
+  if (!await confirmBox("Send invitations?", "Email the invitation to " + plural(emails.length, "selected guest") + ". Anyone already invited gets it again.")) return;
+  try { const r = await apiPost("sendInvites", { emails }); sel.clear(); renderGuests(people()); toast(sendReport(r, "invitation")); } catch (e) { toast(e.message || "Sending failed."); }
 };
+/* Delete people everywhere (guest list, RSVP, check-in). Asks first. */
+async function deleteKeys(keys, label) {
+  const who = keys.length === 1 ? label : plural(keys.length, "guest");
+  if (!await confirmBox("Delete " + who + "?", "This removes " + (keys.length === 1 ? "them" : "these guests") + " from the guest list, deletes any RSVP and check-in, and can't be undone here. (The Google Sheet's version history can still bring rows back.)")) return;
+  try { await apiPost("deleteGuests", { keys }); keys.forEach(k => sel.delete(k)); renderGuests(people()); toast("Deleted " + who + "."); }
+  catch (e) { toast("That didn't save. Try again."); }
+}
+$("selDelete").onclick = () => deleteKeys([...sel], "");
 document.addEventListener("click", e => { document.querySelectorAll("details.menu[open]").forEach(d => { if (!d.contains(e.target)) d.open = false; }); });
 let addMode = "one";
 document.querySelectorAll("#addForm [data-m]").forEach(b => b.onclick = () => { addMode = b.dataset.m; document.querySelectorAll("#addForm [data-m]").forEach(x => x.setAttribute("aria-pressed", String(x === b))); $("addOne").hidden = addMode !== "one"; $("addPaste").hidden = addMode !== "paste"; });

@@ -115,6 +115,7 @@ function action_(b) {
     case "addGuests": return addGuests_(b.guests || []);
     case "updateGuest": return updateGuest_(b.email, b.fields || {});
     case "removeGuest": return removeGuest_(b.email);
+    case "deleteGuests": return deleteGuests_(b.keys || []);
     case "checkIn": return checkIn_(b.email, b.name, b.company, false, b.by);
     case "undoCheckIn": return undoCheckIn_(b.email);
     case "walkIn": return checkIn_(b.email || ("walkin-" + Date.now()), b.name, b.company, true, b.by);
@@ -231,6 +232,26 @@ function removeGuest_(email) {
   if (row < 0) throw new Error("Guest not found.");
   guests_().deleteRow(row);
   return "ok";
+}
+/* Delete people everywhere: Guests, RSVPs and Check-in rows. Keys are emails (any case),
+   "n:first last" for listed guests without an email, or a walk-in's Check-in key. */
+function deleteGuests_(keys) {
+  const want = {};
+  (keys || []).forEach(k => { const v = String(k || "").toLowerCase().trim(); if (v) want[v] = true; });
+  if (!Object.keys(want).length) return { deleted: 0 };
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sweep = (sheet, width, keyOf) => {
+    if (!sheet || sheet.getLastRow() < 2) return 0;
+    const vals = sheet.getRange(2, 1, sheet.getLastRow() - 1, width).getValues();
+    let n = 0;
+    for (let i = vals.length - 1; i >= 0; i--) if (keyOf(vals[i]).some(k => want[k])) { sheet.deleteRow(i + 2); n++; }  // bottom-up keeps row numbers valid
+    return n;
+  };
+  const lc = v => String(v || "").toLowerCase().trim();
+  const removed = sweep(ss.getSheetByName(GUESTS), G_HEAD.length, r => [lc(r[C.email - 1]), "n:" + lc(r[C.first - 1] + " " + r[C.last - 1])]);
+  const rsvps = sweep(getSheet_(), HEADERS.length, r => [lc(r[3])]);
+  const arrivals = sweep(ss.getSheetByName(CHECKIN), 1, r => [lc(r[0])]);
+  return { deleted: Object.keys(want).length, guestRows: removed, rsvpRows: rsvps, checkinRows: arrivals };
 }
 function rowByEmail_(emails) {
   const set = {};
