@@ -449,13 +449,13 @@ function emailHtml_(cfg, first, link, reminder) {
     (img ? '<tr><td align="center"><a href="' + esc_(link) + '" target="_blank"><img src="' + esc_(img) + '" width="600" alt="Open your Smoke Signals invitation" style="display:block;width:100%;max-width:600px;height:auto;border:0;"></a></td></tr>' : '') +
     '<tr><td align="center" style="padding:24px 0 8px;"><a href="' + esc_(link) + '" target="_blank" style="display:inline-block;background:#7C9CC4;color:#16202c;font-family:Arial,sans-serif;font-size:16px;font-weight:bold;letter-spacing:3px;line-height:52px;width:260px;text-align:center;text-decoration:none;">RSVP NOW</a></td></tr>' +
     '<tr><td align="center" style="padding:12px 24px 0;font-family:Arial,sans-serif;font-size:13px;line-height:20px;color:#c3cfdd;">' +
-    'Wednesday, November 4 &middot; 6:00 PM until late<br>Vintage Cigar Lounge &middot; 355 Bridge Street Town Centre, Huntsville, AL<br>' + deadline + 'Space is limited &middot; 21+</td></tr>' +
+    'Wednesday, November 4 &middot; 6:00 PM CT until late<br>Vintage Cigar Lounge &middot; 355 Bridge Street Town Centre, Huntsville, AL<br>' + deadline + 'Space is limited &middot; 21+</td></tr>' +
     '</table></td></tr></table></body></html>';
 }
 function emailText_(first, link, reminder) {
   return "Dear " + (first || "friend") + ",\n\n" +
     (reminder ? "We haven't received your RSVP yet. " : "You're invited to Smoke Signals, an evening after hours with B&A at AFCEA TechNet Rocket City.\n") +
-    "Open your invitation and RSVP: " + link + "\n\nWednesday, November 4, 6:00 PM until late\nVintage Cigar Lounge, 355 Bridge Street Town Centre, Huntsville, AL";
+    "Open your invitation and RSVP: " + link + "\n\nWednesday, November 4, 6:00 PM CT until late\nVintage Cigar Lounge, 355 Bridge Street Town Centre, Huntsville, AL";
 }
 
 function sendRows_(rowFilter, reminder, confirmText) {
@@ -605,7 +605,7 @@ function setupHomeTab() {
   row(1, 24);
   row(2, 22).setValue("B&A HOST ACCESS").setFontColor(PALE).setFontSize(9).setFontWeight("bold");
   row(3, 54).setValue("Smoke Signals").setFontFamily("Playfair Display").setFontStyle("italic").setFontSize(30).setFontWeight("bold");
-  row(4, 26).setValue("Wed, Nov 4 · 6:00 PM until late · Vintage Cigar Lounge, Huntsville · 21+").setFontColor(PALE).setFontSize(10);
+  row(4, 26).setValue("Wed, Nov 4 · 6:00 PM CT until late · Vintage Cigar Lounge, Huntsville · 21+").setFontColor(PALE).setFontSize(10);
   row(5, 20);
   link(row(6, 58), "Open the Back Office  →", BACK_OFFICE_URL);
   h.getRange(6, 2, 1, 2).setBackground(BLUE).setFontColor(DEEP).setFontFamily("Anton").setFontSize(18).setHorizontalAlignment("center");
