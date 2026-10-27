@@ -456,11 +456,11 @@ function show(id){screens.forEach(s=>$(s).hidden=s!==id);window.scrollTo({top:0,
 $("enter").onclick=()=>{show("rsvp");setTimeout(()=>$("first").focus(),300)};
 $("back").onclick=()=>show("door");
 $("edit").onclick=()=>show("rsvp");
-/* Add to calendar: Wed Nov 4, 6:00 to 10:00 PM Central (Huntsville) */
+/* Add to calendar: Wed Nov 4, 6:00 to 10:00 PM CT (Huntsville). Times are UTC; Nov 4 is CST (UTC-6), DST ends Nov 1. */
 (function(){
   const EV={title:"Smoke Signals: An evening after hours with B&A",start:"20261105T000000Z",end:"20261105T040000Z",
     loc:"Vintage Cigar Lounge, 355 Bridge Street Town Centre, Huntsville, AL",
-    desc:"B&A after hours at AFCEA TechNet Rocket City. 6:00 PM until late. 21+."};
+    desc:"B&A after hours at AFCEA TechNet Rocket City. 6:00 PM CT until late. 21+."};
   const iso=t=>t.replace(/(\d{4})(\d\d)(\d\d)T(\d\d)(\d\d)(\d\d)Z/,"$1-$2-$3T$4:$5:$6Z");
   const enc=encodeURIComponent;
   $("calGoogle").href="https://calendar.google.com/calendar/render?action=TEMPLATE&text="+enc(EV.title)+"&dates="+EV.start+"/"+EV.end+"&details="+enc(EV.desc)+"&location="+enc(EV.loc);
