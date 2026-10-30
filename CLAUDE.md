@@ -46,6 +46,7 @@ Replace this path with the newest handoff at the end of each session that ships 
 - **The RSVP contract is shared**: form fields `first, last, email, role, company, attending` are read by `doPost`. Change both sides together.
 - **Pre-push check**: `node --check apps-script/Code.js` before any `clasp push`.
 - **Every public server function is callable from the back office page** via `google.script.run`, without the password. New server functions end in `_` unless they are `adminApi`, `doGet`/`doPost`, a trigger, or a Sheet-menu item. Menu items start with `sheetOnly_();`.
+- **Locks:** guest RSVPs (`doPost`) must never wait on the script lock — they append, then only `tryLock` for the status refresh. Anything else holds the script lock for seconds, via `withScriptLock_`. Bulk sends serialize on the document lock and take the script lock per guest, re-finding the row with `currentGuestRow_`. A long hold here is what made RSVPs fail on 2026-10-30.
 - Login lockout: 10 wrong passwords (from anyone) in 15 min pause all logins (`authed_`, CacheService).
 - Suggest commits; push to `main` only when the user says to (it publishes the live page).
 

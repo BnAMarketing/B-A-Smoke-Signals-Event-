@@ -59,6 +59,7 @@ Event is **Wed Nov 4 2026** — two weeks out as of 2026-10-21. Next-session can
 
 | Date | Session | Outcome |
 |---|---|---|
+| 2026-10-30 | RSVP failure fix | 1–2 guests saw "check your connection": RSVPs waited on the script lock held for minutes by bulk sends, timed out (uncaught) and weren't saved. RSVPs now skip the lock; sends lock per guest; invite page retries x3 with distinct blocked/busy messages. Deployed v10. Failed RSVPs before the fix were never saved — those guests must resubmit. |
 | 2026-10-21 | Back office redesign | `Admin.html` reskinned to the "A refined" clean-console design (sidebar, one "Do this next" action picked from the data, plain status words, big check-in buttons, phone top bar). Same IDs/server calls. Home tab one-time function `setupHomeTab` added. Deployed v5. Mockups: claude.ai/artifact/EGeWVMDc2dNbhcVMNMcRoH |
 | 2026-10-21 | Standalone back office | Back office served by Apps Script (`Admin.html` + `adminApi`); Sheet-menu functions guarded with `sheetOnly_()`; login lockout. Deployed v4. |
 | 2026-10-21 | Claude Code setup | Added CLAUDE.md + docs; backend into `apps-script/` via clasp; admin password moved to Script Properties; clasp repointed to the Sheet-bound script; deployment updated to v3. |
