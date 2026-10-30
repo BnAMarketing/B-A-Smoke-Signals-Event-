@@ -6,21 +6,21 @@ Running snapshot of where this project is *right now*. Updated at the end of eve
 
 ## Pinned focus
 
-Event is **Wed Nov 4 2026** — two weeks out as of 2026-10-21. Next-session candidates, in order:
+The event is **Wed Nov 4 2026**, five days out as of 2026-10-30. The back office is live, and the RSVP failure fix is deployed (v10). Event-week order of operations:
 
-1. **End-to-end test:** submit a test RSVP on the live invite, confirm the row lands in the Sheet, send a test email from the back office.
-2. **Settings tab** (back office > Settings): Invite link = `https://bnamarketing.github.io/B-A-Smoke-Signals-Event-/`; Envelope image link = `https://bnamarketing.github.io/Smoke-Signal-RSVPs/smoke-signals-invite.gif`.
-3. **RSVP deadline** — owner to supply a date; set `RSVP_DEADLINE` in `index.html`.
-4. **Print card:** regenerate the card-back QR to the live invite URL (it currently points at the Claude artifact).
-5. Trash the stray standalone "Untitled project" (`10I_SDmo…zhw-`).
+1. **Recover failed RSVPs.** Have the 1–2 affected guests RSVP again, and check the Executions log (`doPost`, Failed, "Lock timeout") for anyone else.
+2. **STILL OUTSTANDING (since 2026-10-21):** run **`setupHomeTab()` in `apps-script/Code.js`**, approve the card-back QR in `Smoke-Signal-RSVPs`, set `RSVP_DEADLINE` in `index.html`, and confirm deleting the legacy `admin.html` together with the `?key=` branch in `doGet`.
+3. **Settings tab:** confirm the Invite link (`https://bnamarketing.github.io/B-A-Smoke-Signals-Event-/`) and the Envelope image link (`https://bnamarketing.github.io/Smoke-Signal-RSVPs/smoke-signals-invite.gif`).
+4. **Event night:** charge the check-in device, sign it in at the `/exec` link, and print a backup list (RSVPs → Download Excel).
 
 ---
 
 ## Standing invariants (carry forward)
 
-- Public repo: no secrets, no guest data in committed files. Password = Script Property `ADMIN_PASSWORD`.
-- Backend change = `clasp push` + new version of the **existing** deployment (URL must not change).
+- Public repo: no secrets and no guest data in committed files. The password is the Script Property `ADMIN_PASSWORD`.
+- A backend change = `clasp push` + a new version of the **existing** deployment `AKfycby2Ftp…960`. The URL must not change.
 - RSVP fields `first, last, email, role, company, attending` are a contract between `index.html` and `doPost`.
+- RSVPs never wait on the script lock; all other code holds it only briefly, via `withScriptLock_`. Regression check: `node tests/lock_test.js` must print `16/16 passed`.
 - `node --check apps-script/Code.js` before every push.
 
 ---
@@ -29,29 +29,36 @@ Event is **Wed Nov 4 2026** — two weeks out as of 2026-10-21. Next-session can
 
 | Item | Status |
 |---|---|
-| Backend in repo (`apps-script/`), `.clasp.json` → Sheet-bound script (Sheet renamed "AFCEA TechNet RSVPs 2026"; production) (`1S408C1h…T42eN`, parent Sheet `1-Ayv0…VQm4`) | Done 2026-10-21 |
+| Backend: `apps-script/`, with `.clasp.json` → Sheet-bound script (`1S408C1h…T42eN`) of the Sheet "AFCEA TechNet RSVPs 2026" | Live, **v10** (2026-10-30) |
 | `ADMIN_PASSWORD` in Script Properties | Done (owner) |
-| Deployment `AKfycby2Ftp…960` ("Testv1") | Version 3 live — wrong key returns `unauthorized` JSON, no doGet crash |
-| `RSVP_URL` / `API_URL` in HTML | Wired to v3 `/exec` (2026-10-21); back-office login verified by owner |
-| Back office | **Moved into Apps Script**, redesigned (v5, 2026-10-21). Login verified by owner on v4: open the `/exec` link. Wrong-password round trip verified; owner to verify real login. Then delete `admin.html` + legacy `?key=` branch in `doGet` |
-| GitHub Pages | Live: `https://bnamarketing.github.io/B-A-Smoke-Signals-Event-/` (+ `/admin.html`) |
-| `admin.html` insignia | Points at the image repo's Pages URL (no `assets/` folder in this repo) |
-| Settings tab links | Unknown — check the Sheet |
+| Back office | Standalone at the `/exec` link (`Admin.html`). Owner login verified on v4; v5–v10 tested with the fake-data harness only |
+| Invite page (`index.html`) | Live on GitHub Pages, wired to `/exec`; retries x3; "6:00 PM CT" |
+| Legacy `admin.html` + `doGet ?key=` branch | Still live; pending the owner's OK to delete |
+| Team Home tab (`setupHomeTab`) | Not confirmed as run |
+| Card-back QR (`Smoke-Signal-RSVPs`) | Still points at the Claude artifact; replacement awaiting OK |
+| RSVP deadline | Unset (owner to supply) |
+| Settings tab links | Unconfirmed |
+| Outlook sending | Not built; waiting on IT's recommendation |
 
 ---
 
 ## Open issues / risks
 
-- The earlier doGet error came from a standalone copy of the script (no bound Sheet → `getActiveSpreadsheet()` is null). Fixed by repointing clasp to the bound script.
-- "Claude version" of the back office (Smoke Signals Invite artifact > Host back office, PIN) works independently of this repo.
+- RSVPs that failed before v10 were never saved. They can't be recovered, so those guests must resubmit.
+- A retried RSVP can leave a duplicate row in the RSVPs tab, if the first attempt saved but the reply was lost. The back office merges duplicates by email, and Delete removes all of them.
+- Excel download inside Google's sandboxed frame is untested. CSV is the fallback.
+- TechNet backend (`B-A-AFCEA-TechNet-RSVPs`): location unknown.
+- "Claude version" of the back office (the Smoke Signals Invite artifact → Host back office, PIN) works independently of this repo.
 
 ---
 
 ## Architecture notes worth remembering
 
-- `authed_()` refuses empty or `"CHANGE-ME"` passwords, and failed auth sleeps 800 ms to slow guessing.
-- `doPost` takes a script lock (20 s) so simultaneous RSVPs don't overwrite each other's rows.
-- Auto mode (`turnOnAuto` / `autoRun`) is a time trigger for scheduled sends/reminders.
+- `authed_()` refuses empty or `"CHANGE-ME"` passwords, sleeps 800 ms on a failure, and pauses all logins after 10 failures in 15 minutes (CacheService).
+- Every public server function can be called through `google.script.run` by anyone viewing the page. That's why menu functions start with `sheetOnly_()` and `setupHomeTab` with `ownerOnly_()`.
+- Locks: `doPost` (guest RSVP) appends with no lock. `sendRows_` serializes on the document lock and stamps each guest under a brief script lock, after re-finding the row with `currentGuestRow_`. `autoRun` relies on the same locking.
+- Guests and RSVPs screens both read `people()`, which merges the Guests, RSVPs and Check-in tabs, then filter it differently. Email status is worked out in this order: replied → never sent → not reminded → reminded.
+- UI checks without the real Sheet: `python tests/build_admin_harness.py`, then serve `tests/out/` (password `test`).
 
 ---
 
@@ -59,7 +66,5 @@ Event is **Wed Nov 4 2026** — two weeks out as of 2026-10-21. Next-session can
 
 | Date | Session | Outcome |
 |---|---|---|
-| 2026-10-30 | RSVP failure fix | 1–2 guests saw "check your connection": RSVPs waited on the script lock held for minutes by bulk sends, timed out (uncaught) and weren't saved. RSVPs now skip the lock; sends lock per guest; invite page retries x3 with distinct blocked/busy messages. Deployed v10. Failed RSVPs before the fix were never saved — those guests must resubmit. |
-| 2026-10-21 | Back office redesign | `Admin.html` reskinned to the "A refined" clean-console design (sidebar, one "Do this next" action picked from the data, plain status words, big check-in buttons, phone top bar). Same IDs/server calls. Home tab one-time function `setupHomeTab` added. Deployed v5. Mockups: claude.ai/artifact/EGeWVMDc2dNbhcVMNMcRoH |
-| 2026-10-21 | Standalone back office | Back office served by Apps Script (`Admin.html` + `adminApi`); Sheet-menu functions guarded with `sheetOnly_()`; login lockout. Deployed v4. |
-| 2026-10-21 | Claude Code setup | Added CLAUDE.md + docs; backend into `apps-script/` via clasp; admin password moved to Script Properties; clasp repointed to the Sheet-bound script; deployment updated to v3. |
+| 2026-10-30 | Standalone back office → redesign → RSVP fix | Back office moved into Apps Script (v4), redesigned (v5); delete guests (v6); Guests/RSVPs split (v7); Home finder (v8); "CT" labels (v9); RSVP lock fix with a retrying invite page (v10). Tests promoted to `tests/`. |
+| 2026-10-21 | Claude Code setup | Added CLAUDE.md + docs; backend into `apps-script/` via clasp; admin password moved to Script Properties; clasp repointed to the Sheet-bound script; v3. |

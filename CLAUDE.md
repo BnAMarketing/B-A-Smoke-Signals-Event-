@@ -18,7 +18,7 @@ If sources conflict, `CLAUDE.md` wins for structure / invariants; the state doc 
 
 Replace this path with the newest handoff at the end of each session that ships material changes.
 
-@docs/SmokeSignals_SessionHandoff_2026_10_21.md
+@docs/SmokeSignals_SessionHandoff_2026_10_30.md
 
 ## Quick orientation
 
@@ -62,6 +62,16 @@ cd apps-script && clasp push   # repo -> Apps Script HEAD (then redeploy a new v
 
 ## Skills
 
+**Repo-specific** (`.claude/skills/`, load only in this repo; these win over the globals on local conventions):
+
+| Skill | When |
+|---|---|
+| `smoke-signals-backoffice-change` | Any change to `apps-script/Admin.html` or `Code.js`: rules (private functions, locking, IDs) + fake-data test loop. |
+| `smoke-signals-deploy` | Shipping: clasp push → update the ONE deployment → live probes; GitHub Pages push → poll until live. |
+| `smoke-signals-session-handoff` | Close-out. Wraps `session-handoff` and always ends with a skill-review picker (apply / create repo skill / skip). |
+
+Global-skill lessons wait in `docs/GlobalSkillNotes.md`. Global skills come from Claude-Skills-Solo, which Claude must not edit.
+
 User-global skills that fit this repo:
 
 | Skill | When |
@@ -72,7 +82,7 @@ User-global skills that fit this repo:
 | `appsscript-oauth-scopes` | Authorization errors after adding a service (e.g. Gmail/Mail scopes). |
 | `appsscript-editor-action` | Asking the user to run a function in the Apps Script editor. |
 | `anthropic-skills:ba-brand-kit` | Any visual/copy change — B&A brand. |
-| `session-handoff` | End of a session that shipped changes. |
+| `session-handoff` | Generic close-out; in this repo use `smoke-signals-session-handoff`. |
 
 ## Common pitfalls
 
@@ -87,4 +97,5 @@ User-global skills that fit this repo:
 - `index.html` — guest invite + RSVP
 - `admin.html` — legacy back office (to be deleted)
 - `apps-script/Code.js`, `apps-script/Admin.html`, `apps-script/appsscript.json`, `apps-script/.clasp.json` — backend + back office
+- `tests/` — `lock_test.js` (RSVP lock regression, `node tests/lock_test.js` → `16/16 passed`), `build_admin_harness.py` + `admin_stub.html` (fake-data back office)
 - `docs/` — current state + session handoffs
