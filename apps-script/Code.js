@@ -87,27 +87,25 @@ function doGet(e) {
 
 /* POST: guest RSVPs (form fields) or back office actions (JSON with key + action) */
 function doPost(e) {
-  const lock = LockService.getScriptLock();
-  lock.waitLock(20000);
+  let body = null;
+  try { body = JSON.parse((e.postData && e.postData.contents) || ""); } catch (x) { body = null; }
+  /* Legacy GitHub admin.html sends JSON actions; same path as the Apps Script back office. */
+  if (body && body.action) return out_(adminApi(body.key, body.action, body));
+
+  /* Guest RSVP: append right away, no lock. Appends only ever add below the last row,
+     so nothing the back office does can collide with them, and a long send can't make an RSVP time out. */
+  const p = e.parameter || {};
+  if (!p.email) return ContentService.createTextOutput("missing");
   try {
-    let body = null;
-    try { body = JSON.parse((e.postData && e.postData.contents) || ""); } catch (x) { body = null; }
-    if (body && body.action) {
-      if (!authed_(body.key)) { Utilities.sleep(800); return out_({ ok: false, error: "unauthorized" }); }
-      ensureTabs_();
-      const result = action_(body);
-      return out_({ ok: true, result: result, data: snapshot_() });
-    }
-    const p = e.parameter || {};
-    if (!p.email) return ContentService.createTextOutput("missing");
     getSheet_().appendRow([new Date(), clean_(p.first), clean_(p.last), clean_(p.email), clean_(p.role), clean_(p.company), clean_(p.attending)]);
-    try { refreshStatus_(); } catch (err) {}
-    return ContentService.createTextOutput("ok");
   } catch (err) {
-    return out_({ ok: false, error: String(err.message || err) });
-  } finally {
-    lock.releaseLock();
+    return ContentService.createTextOutput("error");
   }
+  /* Guest-list status is a nicety: refresh it only if the sheet is free right now.
+     Otherwise the back office's next refresh catches it up. */
+  const lock = LockService.getScriptLock();
+  if (lock.tryLock(1000)) { try { refreshStatus_(); } catch (err) {} finally { lock.releaseLock(); } }
+  return ContentService.createTextOutput("ok");
 }
 
 function action_(b) {
@@ -131,20 +129,35 @@ function action_(b) {
 }
 
 /* Back office page (Admin.html) calls this through google.script.run. Password checked on every call. */
+const SEND_ACTIONS = { sendInvites: true, sendUnsent: true, sendReminders: true, sendTest: true };
 function adminApi(key, action, extra) {
   if (!authed_(key)) { Utilities.sleep(800); return { ok: false, error: "unauthorized" }; }
-  const lock = LockService.getScriptLock();
-  lock.waitLock(20000);
   try {
-    ensureTabs_();
-    if (action === "snapshot") return JSON.parse(JSON.stringify({ ok: true, data: snapshot_() }));
-    const result = action_(Object.assign({}, extra || {}, { action: action }));
-    return JSON.parse(JSON.stringify({ ok: true, result: result, data: snapshot_() }));
+    let result = null;
+    if (action !== "snapshot") {
+      const b = Object.assign({}, extra || {}, { action: action });
+      /* Sends manage their own short locks (see sendRows_) so RSVPs and the rest of the team aren't blocked for minutes. */
+      result = SEND_ACTIONS[action] ? action_(b) : withScriptLock_(() => { ensureTabs_(); return action_(b); });
+    }
+    const data = withScriptLock_(() => { ensureTabs_(); return snapshot_(); });
+    return JSON.parse(JSON.stringify({ ok: true, result: result, data: data }));
   } catch (err) {
     return { ok: false, error: String(err.message || err) };
-  } finally {
-    lock.releaseLock();
   }
+}
+
+/* Run fn while holding the sheet lock. Every holder keeps it for seconds, not minutes. */
+function withScriptLock_(fn, ms) {
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(ms || 30000)) throw new Error("The sheet is busy. Try again in a moment.");
+  try { return fn(); } finally { lock.releaseLock(); }
+}
+
+/* Row i (0-based, as read at the start of a send) may have moved if guests were deleted mid-send. */
+function currentGuestRow_(g, i, email) {
+  const r = i + 2;
+  if (r <= g.getLastRow() && String(g.getRange(r, C.email).getValue()).trim() === email) return r;
+  return email ? findGuestRow_(email) : -1;
 }
 
 /* Everything the back office shows, in one read */
@@ -463,10 +476,17 @@ function sendRows_(rowFilter, reminder, confirmText) {
   const base = String(cfg["Invite link"] || "").trim();
   if (!base || base.indexOf("YOURNAME") >= 0) throw new Error('Add your real invite link in Settings ("Invite link") first.');
   const g = guests_();
-  const n = g.getLastRow() - 1;
-  if (n < 1) return { sent: 0, skipped: 0, note: "No guests on the list yet." };
-  refreshStatus_();
-  const data = g.getRange(2, 1, n, G_HEAD.length).getValues();
+  /* Only one send runs at a time (a separate lock from the sheet lock RSVPs and the back office use). */
+  const sendLock = LockService.getDocumentLock() || LockService.getUserLock();  // document lock is null outside a bound context
+  if (!sendLock.tryLock(1000)) throw new Error("Another send is already running. Try again in a few minutes.");
+  try {
+  const data = withScriptLock_(() => {
+    const n = g.getLastRow() - 1;
+    if (n < 1) return [];
+    refreshStatus_();
+    return g.getRange(2, 1, n, G_HEAD.length).getValues();
+  });
+  if (!data.length) return { sent: 0, skipped: 0, note: "No guests on the list yet." };
   const targets = [];
   data.forEach((r, i) => { if (rowFilter(r)) targets.push(i); });
   if (!targets.length) return { sent: 0, skipped: 0, note: "No guests match." };
@@ -479,7 +499,7 @@ function sendRows_(rowFilter, reminder, confirmText) {
   targets.forEach(i => {
     const r = data[i];
     const email = String(r[C.email - 1]).trim();
-    if (!validEmail_(email)) { skipped++; g.getRange(i + 2, C.status).setValue("Check email address"); return; }
+    if (!validEmail_(email)) { skipped++; withScriptLock_(() => { const row = currentGuestRow_(g, i, email); if (row > 0) g.getRange(row, C.status).setValue("Check email address"); }); return; }
     if (sent >= quota) { skipped++; return; }
     const link = personalLink_(base, r[C.first - 1], r[C.last - 1]);
     const opts = {
@@ -492,11 +512,18 @@ function sendRows_(rowFilter, reminder, confirmText) {
     if (validEmail_(cfg["Reply-to email"])) opts.replyTo = String(cfg["Reply-to email"]).trim();
     MailApp.sendEmail(opts);
     sent++;
-    g.getRange(i + 2, reminder ? C.reminded : C.sent).setValue(new Date());
-    g.getRange(i + 2, C.link).setValue(link);
-    if (!reminder) g.getRange(i + 2, C.send).setValue(false);
+    withScriptLock_(() => {  // brief: stamp this guest, then let RSVPs and the back office through
+      const row = currentGuestRow_(g, i, email);
+      if (row < 0) return;  // deleted while we were sending
+      g.getRange(row, reminder ? C.reminded : C.sent).setValue(new Date());
+      g.getRange(row, C.link).setValue(link);
+      if (!reminder) g.getRange(row, C.send).setValue(false);
+    });
   });
   return { sent: sent, skipped: skipped, note: sent >= quota && targets.length > sent ? "Daily email limit reached; the rest will need another day." : "" };
+  } finally {
+    sendLock.releaseLock();
+  }
 }
 
 function report_(res, what) {
@@ -557,8 +584,6 @@ function setSetting_(s, key, val) {
   s.appendRow([key, val, ""]);
 }
 function autoRun() {
-  const lock = LockService.getScriptLock();
-  if (!lock.tryLock(5000)) return;
   try {
     const cfg = settings_();
     if (String(cfg["Automatic sending"]).toLowerCase() !== "on") return;
@@ -567,9 +592,9 @@ function autoRun() {
     const remindAt = cfg["Send reminders on"] instanceof Date ? cfg["Send reminders on"] : null;
     if (inviteAt && now >= inviteAt) sendRows_(r => r[C.email - 1] && !r[C.sent - 1], false, null);
     if (remindAt && now >= remindAt) sendRows_(r => r[C.email - 1] && r[C.sent - 1] && !r[C.reminded - 1] && !/Attending|Declined/.test(r[C.status - 1]), true, null);
-    refreshStatus_();
-  } finally {
-    lock.releaseLock();
+    withScriptLock_(refreshStatus_);
+  } catch (err) {
+    console.log("autoRun skipped: " + (err.message || err));  // e.g. a manual send is running; next hour retries
   }
 }
 /* ================= Home tab (one-time setup) ================= */

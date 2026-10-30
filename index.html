@@ -478,6 +478,7 @@ $("edit").onclick=()=>show("rsvp");
 /* ===== SETTINGS: edit these two lines ===== */
 const RSVP_URL="https://script.google.com/macros/s/AKfycby2FtpOHPbhLHu-R9KxTyvHYjgf435FB92YW_bnlOW1DxCHFmZghKf1-nTAHnJG960/exec";   // your Apps Script web app URL, ends in /exec
 const RSVP_DEADLINE="";                              // e.g. "October 30". Leave "" to hide the line.
+const RSVP_HELP_EMAIL="";                            // shown if an RSVP can't get through. Leave "" to just say "the B&A team".
 /* ========================================== */
 if(RSVP_DEADLINE){$("replyDate").textContent=RSVP_DEADLINE;$("replyBy").hidden=false;}
 const LS="smoke_signals_rsvp";
@@ -486,6 +487,25 @@ function fill(d){
   if(d.attending&&$("att-"+d.attending)) $("att-"+d.attending).checked=true;
 }
 try{const prev=JSON.parse(localStorage.getItem(LS)||"null");if(prev)fill(prev);}catch(e){}
+
+/* Send the RSVP, retrying quietly. "unreachable" = the request never got an answer (blocked network,
+   offline, extension); "busy" = the server answered but didn't confirm the save. */
+async function sendRsvp(data){
+  let reached=false;
+  for(let i=0;i<3;i++){
+    if(i){$("send").textContent="Still sending…";await new Promise(r=>setTimeout(r,i*2000));}
+    const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),25000);
+    try{
+      const res=await fetch(RSVP_URL,{method:"POST",body:new URLSearchParams(data),signal:ctl.signal});
+      reached=true;
+      const txt=(await res.text()).trim();
+      if(res.ok&&txt==="ok") return;
+      if(txt==="missing") throw new Error("missing");
+    }catch(x){if(x.message==="missing") throw x;}
+    finally{clearTimeout(timer);}
+  }
+  throw new Error(reached?"busy":"unreachable");
+}
 
 $("form").addEventListener("submit",async e=>{
   e.preventDefault();
@@ -499,9 +519,7 @@ $("form").addEventListener("submit",async e=>{
   const data={first:v("first"),last:v("last"),email:v("email"),role:v("role"),company:v("company"),attending:att.value==="yes"?"Yes":"No"};
   try{
     if(!/^https:\/\/script\.google\.com\//.test(RSVP_URL)) throw new Error("setup");
-    const res=await fetch(RSVP_URL,{method:"POST",body:new URLSearchParams(data)});
-    const txt=await res.text();
-    if(!res.ok||txt.trim()!=="ok") throw new Error("fail");
+    await sendRsvp(data);
     try{localStorage.setItem(LS,JSON.stringify(Object.assign({},data,{attending:att.value})))}catch(x){}
     $("doneTitle").textContent=att.value==="yes"?"See you inside, "+data.first:"We'll miss you, "+data.first;
     $("doneMsg").textContent=att.value==="yes"
@@ -510,9 +528,10 @@ $("form").addEventListener("submit",async e=>{
     $("addCal").hidden=att.value!=="yes";$("calOpts").hidden=true;$("addCal").setAttribute("aria-expanded","false");$("calMsg").textContent="";
     show("done");
   }catch(err){
-    $("err").textContent=err.message==="setup"
-      ?"RSVPs aren't connected yet. Contact the B&A team."
-      :"Your RSVP didn't go through. Check your connection and send it again.";
+    const who=RSVP_HELP_EMAIL?RSVP_HELP_EMAIL:"the B&A team";
+    $("err").textContent=err.message==="setup"?"RSVPs aren't connected yet. Contact the B&A team."
+      :err.message==="unreachable"?"We couldn't reach our RSVP system from this network. If you're on a work, government or VPN network, try again on your phone's data, or email "+who+"."
+      :"Our RSVP system is busy right now. Please wait a minute and send it again, or email "+who+".";
   }finally{$("send").disabled=false;$("send").textContent="Send my RSVP";}
 });
 </script>
