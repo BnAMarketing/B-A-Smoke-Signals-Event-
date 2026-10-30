@@ -5,7 +5,6 @@
 **Outcome:** The back office is a standalone Apps Script site at the `/exec` link, now on **v10**. RSVPs no longer wait behind the back office. The invite page retries and gives accurate error messages. The event is **Wed Nov 4**, five days out.
 **Next session focus:** Event-week readiness: confirm the affected guests re-RSVP'd, then run Home tab setup, the card QR, the RSVP deadline, and the `admin.html` cleanup.
 
-> **STILL OUTSTANDING (since 2026-10-21):** **`setupHomeTab()` in `apps-script/Code.js`** has never been confirmed as run.
 > **Legacy `admin.html`** is still live on GitHub Pages, along with the `?key=` branch in `doGet`.
 > The **RSVP deadline** is still unset; the owner will supply it.
 
@@ -113,3 +112,12 @@ Today I want to: <pick: event-week readiness check / delete admin.html / card QR
 **Resolved:** the printed card QR. The owner printed the cards and scanned one: it opens the GitHub invite, and the RSVP went through, which is a live end-to-end test. The repo PNG `Smoke-Signal-RSVPs/smoke-signals-card-back.png` is outdated (old QR) but irrelevant to the printed cards.
 
 **Not checkable from here:** changes on the Mac that were never committed or pushed. If the Mac's repo folders exist, run `git status` there; anything listed was never pushed.
+
+## Later session — open-items check against the real Sheet
+
+Read the Sheet through the Drive connector (read only) and compared it with the docs.
+- **Done:** Home tab exists (`setupHomeTab` was run; before the CT change). Card QR (owner).
+- **Decided:** RSVP deadline dropped; `admin.html` kept until after the event.
+- **New facts:** emails go out through **Power Automate**. The Guests tab is empty; the invite list lives in the flow, and all 27 RSVPs came straight from the invite page. Settings still has `YOURNAME` placeholders, so the Home card stays stuck. The owner's QR-test RSVP isn't in the Sheet under their name (unconfirmed which name they used).
+- **Saved:** the Power Automate email HTML in `docs/email/` (invite drafts A/B, reminder; real name replaced by a placeholder). `envelope-open.png` added so all email images are hosted.
+- **Open:** whether to switch the emails from embedded `data:` images to hosted links (owner undecided); which invite option the flow sends; fill in the Settings links.

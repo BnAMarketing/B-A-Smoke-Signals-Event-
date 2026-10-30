@@ -9,8 +9,8 @@ Running snapshot of where this project is *right now*. Updated at the end of eve
 The event is **Wed Nov 4 2026**, five days out as of 2026-10-30. The back office is live, and the RSVP failure fix is deployed (v10). Event-week order of operations:
 
 1. **Recover failed RSVPs.** Have the 1–2 affected guests RSVP again, and check the Executions log (`doPost`, Failed, "Lock timeout") for anyone else.
-2. **STILL OUTSTANDING (since 2026-10-21):** run **`setupHomeTab()` in `apps-script/Code.js`**, set `RSVP_DEADLINE` in `index.html`, and confirm deleting the legacy `admin.html` together with the `?key=` branch in `doGet`.
-3. **Settings tab:** confirm the Invite link (`https://bnamarketing.github.io/B-A-Smoke-Signals-Event-/`) and the Envelope image link (`https://bnamarketing.github.io/Smoke-Signal-RSVPs/smoke-signals-invite.gif`).
+2. **Settings tab still has `YOURNAME` placeholders** (verified in the Sheet 2026-10-30). Power Automate sends the emails, so guests aren't affected, but the back office's Home card stays stuck on "Finish the email settings" until they're filled in (back office → Settings): Invite link = `https://bnamarketing.github.io/B-A-Smoke-Signals-Event-/`.
+3. **Decide on email images:** the Power Automate HTML embeds its images as `data:` URIs, which Gmail and some Outlook versions don't show. Hosted copies exist; see `docs/email/README.md`. Owner undecided.
 4. **Event night:** charge the check-in device, sign it in at the `/exec` link, and print a backup list (RSVPs → Download Excel).
 
 ---
@@ -33,12 +33,12 @@ The event is **Wed Nov 4 2026**, five days out as of 2026-10-30. The back office
 | `ADMIN_PASSWORD` in Script Properties | Done (owner) |
 | Back office | Standalone at the `/exec` link (`Admin.html`). Owner login verified on v4; v5–v10 tested with the fake-data harness only |
 | Invite page (`index.html`) | Live on GitHub Pages, wired to `/exec`; retries x3; "6:00 PM CT" |
-| Legacy `admin.html` + `doGet ?key=` branch | Still live; pending the owner's OK to delete |
-| Team Home tab (`setupHomeTab`) | Not confirmed as run |
+| Legacy `admin.html` + `doGet ?key=` branch | Still live. **Owner decided to keep it until after the event** (2026-10-30) |
+| Team Home tab (`setupHomeTab`) | **Done.** The Home tab exists in the Sheet (verified 2026-10-30). It was run before the CT change, so it reads "6:00 PM until late"; re-run it to show "CT" (optional) |
 | Printed card QR | **Done** (owner, verified 2026-10-30): the printed card's QR opens the GitHub invite, and the owner's RSVP went through end to end. The repo copy `Smoke-Signal-RSVPs/smoke-signals-card-back.png` still has the old artifact QR; it's an outdated file only, and doesn't affect the printed cards |
-| RSVP deadline | Unset (owner to supply) |
-| Settings tab links | Unconfirmed |
-| Outlook sending | Not built; waiting on IT's recommendation |
+| RSVP deadline | **Dropped** (owner, 2026-10-30): no deadline line on the invite. The tracker's "deadline" item can be ticked |
+| Settings tab links | Still `YOURNAME` placeholders (only affects the Home card; see Pinned focus) |
+| Emails | **Sent by Power Automate** (owner's flow), not by the Apps Script back office. Reference copies of the HTML are in `docs/email/`. Back office Emails screen and Guests tab unused: **the Guests tab in the Sheet is empty**, and all RSVPs arrive directly from the invite page |
 
 ---
 
@@ -66,6 +66,7 @@ The event is **Wed Nov 4 2026**, five days out as of 2026-10-30. The back office
 
 | Date | Session | Outcome |
 |---|---|---|
+| 2026-10-30 | Open-items check | Read the real Sheet: Home tab done; Guests tab empty (the invite list lives in Power Automate); Settings still placeholders; 27 RSVPs, one duplicate (Yes, Yes); the owner's QR-test RSVP not found under their name. Emails confirmed as Power Automate; HTML saved to `docs/email/`; `envelope-open.png` added. Deadline dropped; `admin.html` kept until after the event. |
 | 2026-10-30 | Sync verification | GitHub (3 repos, all branches), the Apps Script editor copy and the live sites all match the repo; versions 3–10 are all accounted for; the only commit not from a Claude session is `8c378c4 pngs` (4 images). Printed card QR verified by the owner. |
 | 2026-10-30 | Standalone back office → redesign → RSVP fix | Back office moved into Apps Script (v4), redesigned (v5); delete guests (v6); Guests/RSVPs split (v7); Home finder (v8); "CT" labels (v9); RSVP lock fix with a retrying invite page (v10). Tests promoted to `tests/`. |
 | 2026-10-21 | Claude Code setup | Added CLAUDE.md + docs; backend into `apps-script/` via clasp; admin password moved to Script Properties; clasp repointed to the Sheet-bound script; v3. |
