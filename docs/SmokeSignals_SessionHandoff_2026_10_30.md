@@ -6,7 +6,6 @@
 **Next session focus:** Event-week readiness: confirm the affected guests re-RSVP'd, then run Home tab setup, the card QR, the RSVP deadline, and the `admin.html` cleanup.
 
 > **STILL OUTSTANDING (since 2026-10-21):** **`setupHomeTab()` in `apps-script/Code.js`** has never been confirmed as run.
-> The **card-back QR** in `BnAMarketing/Smoke-Signal-RSVPs/smoke-signals-card-back.png` still points at the Claude artifact, and nothing has been committed there since setup.
 > **Legacy `admin.html`** is still live on GitHub Pages, along with the `?key=` branch in `doGet`.
 > The **RSVP deadline** is still unset; the owner will supply it.
 
@@ -79,7 +78,6 @@
 ## Outstanding user actions
 
 - **`setupHomeTab()` in `apps-script/Code.js`** — run once from the [Apps Script editor](https://script.google.com/d/1S408C1hKN9gFPLRK1_I26GDen5ANN8csZfM6CSMFzXqrXZAmenhT42eN/edit) (file `Code.gs`, pick the function, click Run). It builds the team Home tab. *(Outstanding since 2026-10-21.)*
-- **Card back, `Smoke-Signal-RSVPs/smoke-signals-card-back.png`** — approve the replacement QR (it points at the live invite) before printing. *(Since 2026-10-21.)*
 - **`RSVP_DEADLINE` in `index.html`** — supply a date. *(Since 2026-10-21.)*
 - **Delete `admin.html`** — confirm, and Claude removes it along with the `?key=` branch in `doGet` (`apps-script/Code.js`). *(Since 2026-10-21.)*
 - Ask the 1–2 affected guests to RSVP again.
@@ -98,6 +96,20 @@
 
 ```
 Smoke Signals repo: read docs/SmokeSignals_CurrentState.md first. The back office is a standalone Apps Script site at the /exec link (v10), with Guests (invite list) and RSVPs split, delete, a Home finder, and the RSVP lock fix (RSVPs never wait on the script lock; node tests/lock_test.js = 16/16). The event is Wed Nov 4.
-STILL OUTSTANDING since 2026-10-21: run setupHomeTab() in apps-script/Code.js, approve the card-back QR replacement in Smoke-Signal-RSVPs, set RSVP_DEADLINE in index.html, and confirm deleting the legacy admin.html (plus the ?key= branch in doGet).
+STILL OUTSTANDING since 2026-10-21: run setupHomeTab() in apps-script/Code.js, set RSVP_DEADLINE in index.html, and confirm deleting the legacy admin.html (plus the ?key= branch in doGet).
 Today I want to: <pick: event-week readiness check / delete admin.html / card QR / Record RSVP option / Outlook sending once IT replies>.
 ```
+
+## Later session — sync verification (Mac check)
+
+**Why:** the owner may have edited on a Mac and wanted proof that nothing is out of sync, and that the last push broke nothing.
+
+**Checked (all match):**
+- GitHub, all 3 repos: one branch each (`main`); local = origin; no uncommitted files. Every commit is from a Claude session except `8c378c4 pngs` (Oct 21 21:33; envelope + 3 logos), which is probably the Mac change.
+- Apps Script: `clasp clone` of the live project vs `apps-script/`: `Code.js`, `Admin.html`, `appsscript.json` **IDENTICAL**, no extra files. `clasp list-versions`: 10 versions; 3–10 match this session's deploys.
+- The last 3 commits touched only `.claude/skills/`, `tests/`, `docs/`, `CLAUDE.md`, with no runtime code.
+- Live: invite page **IDENTICAL** to repo `index.html`; back office title `Smoke Signals Back Office`; RSVP probe `missing` (nothing saved); `node tests/lock_test.js` → `16/16 passed`.
+
+**Resolved:** the printed card QR. The owner printed the cards and scanned one: it opens the GitHub invite, and the RSVP went through, which is a live end-to-end test. The repo PNG `Smoke-Signal-RSVPs/smoke-signals-card-back.png` is outdated (old QR) but irrelevant to the printed cards.
+
+**Not checkable from here:** changes on the Mac that were never committed or pushed. If the Mac's repo folders exist, run `git status` there; anything listed was never pushed.

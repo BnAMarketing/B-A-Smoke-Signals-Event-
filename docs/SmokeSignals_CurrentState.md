@@ -9,7 +9,7 @@ Running snapshot of where this project is *right now*. Updated at the end of eve
 The event is **Wed Nov 4 2026**, five days out as of 2026-10-30. The back office is live, and the RSVP failure fix is deployed (v10). Event-week order of operations:
 
 1. **Recover failed RSVPs.** Have the 1–2 affected guests RSVP again, and check the Executions log (`doPost`, Failed, "Lock timeout") for anyone else.
-2. **STILL OUTSTANDING (since 2026-10-21):** run **`setupHomeTab()` in `apps-script/Code.js`**, approve the card-back QR in `Smoke-Signal-RSVPs`, set `RSVP_DEADLINE` in `index.html`, and confirm deleting the legacy `admin.html` together with the `?key=` branch in `doGet`.
+2. **STILL OUTSTANDING (since 2026-10-21):** run **`setupHomeTab()` in `apps-script/Code.js`**, set `RSVP_DEADLINE` in `index.html`, and confirm deleting the legacy `admin.html` together with the `?key=` branch in `doGet`.
 3. **Settings tab:** confirm the Invite link (`https://bnamarketing.github.io/B-A-Smoke-Signals-Event-/`) and the Envelope image link (`https://bnamarketing.github.io/Smoke-Signal-RSVPs/smoke-signals-invite.gif`).
 4. **Event night:** charge the check-in device, sign it in at the `/exec` link, and print a backup list (RSVPs → Download Excel).
 
@@ -35,7 +35,7 @@ The event is **Wed Nov 4 2026**, five days out as of 2026-10-30. The back office
 | Invite page (`index.html`) | Live on GitHub Pages, wired to `/exec`; retries x3; "6:00 PM CT" |
 | Legacy `admin.html` + `doGet ?key=` branch | Still live; pending the owner's OK to delete |
 | Team Home tab (`setupHomeTab`) | Not confirmed as run |
-| Card-back QR (`Smoke-Signal-RSVPs`) | Still points at the Claude artifact; replacement awaiting OK |
+| Printed card QR | **Done** (owner, verified 2026-10-30): the printed card's QR opens the GitHub invite, and the owner's RSVP went through end to end. The repo copy `Smoke-Signal-RSVPs/smoke-signals-card-back.png` still has the old artifact QR; it's an outdated file only, and doesn't affect the printed cards |
 | RSVP deadline | Unset (owner to supply) |
 | Settings tab links | Unconfirmed |
 | Outlook sending | Not built; waiting on IT's recommendation |
@@ -66,5 +66,6 @@ The event is **Wed Nov 4 2026**, five days out as of 2026-10-30. The back office
 
 | Date | Session | Outcome |
 |---|---|---|
+| 2026-10-30 | Sync verification | GitHub (3 repos, all branches), the Apps Script editor copy and the live sites all match the repo; versions 3–10 are all accounted for; the only commit not from a Claude session is `8c378c4 pngs` (4 images). Printed card QR verified by the owner. |
 | 2026-10-30 | Standalone back office → redesign → RSVP fix | Back office moved into Apps Script (v4), redesigned (v5); delete guests (v6); Guests/RSVPs split (v7); Home finder (v8); "CT" labels (v9); RSVP lock fix with a retrying invite page (v10). Tests promoted to `tests/`. |
 | 2026-10-21 | Claude Code setup | Added CLAUDE.md + docs; backend into `apps-script/` via clasp; admin password moved to Script Properties; clasp repointed to the Sheet-bound script; v3. |
