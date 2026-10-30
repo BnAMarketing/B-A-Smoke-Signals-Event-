@@ -1,0 +1,29 @@
+<script>
+/* TEST HARNESS ONLY: fake google.script.run with sample data. Not deployed. Password: "test". */
+(function(){
+  const iso=(d,h)=>new Date(Date.now()-d*864e5-(h||0)*36e5).toISOString();
+  const co=["Army PEO","Redstone Arsenal","OpenText","NetWitness","MDA","NASA MSFC","Leidos","SAIC"];
+  const fn=["Avery","Jordan","Riley","Casey","Morgan","Taylor","Quinn","Reese","Parker","Drew","Rowan","Sage"];
+  const ln=["Hale","Brooks","Nguyen","Patel","Ortiz","Kim","Shaw","Reid","Lane","Cole","Ford","Wells"];
+  const D={guests:[],rsvps:[],arrivals:[],tasks:{script:{done:true},site:{done:true},guests:{done:true}},settings:{"Invite link":"https://bnamarketing.github.io/B-A-Smoke-Signals-Event-/","Envelope image link":"","Email subject":"You're invited","Reminder subject":"","Sender name":"B&A","Reply-to email":"","RSVP deadline":"","Venue capacity":"60","Automatic sending":"Off","Send invites on":"","Send reminders on":""},quota:94,now:new Date().toISOString()};
+  for(let i=0;i<24;i++){const e="guest"+i+"@example.com",sent=i<20?iso(9):"";D.guests.push({first:fn[i%12],last:ln[(i*5)%12],email:e,company:co[i%8],status:"",sent,reminded:i<4?iso(2):"",link:"",notes:i===3?"VIP":""});
+    if(i<10)D.rsvps.push({submitted:iso(i%5,i),first:fn[i%12],last:ln[(i*5)%12],email:e,role:"Program Manager",company:co[i%8],attending:i%4===3?"No":"Yes"});}
+  D.rsvps.push({submitted:iso(0,2),first:"Direct",last:"Rsvp",email:"direct@example.com",role:"",company:"Walk Co",attending:"Yes"});
+  D.arrivals.push({email:"guest1@example.com",name:"x",company:"",arrived:iso(0,1),walkin:false,by:""});
+  const k=v=>String(v||"").toLowerCase().trim();
+  function api(key,action,extra){
+    if(key!=="test")return{ok:false,error:"unauthorized"};
+    let result=null;
+    if(action==="checkIn"){D.arrivals.push({email:extra.email,name:extra.name,company:extra.company,arrived:new Date().toISOString(),walkin:false});result="ok";}
+    if(action==="undoCheckIn"){D.arrivals=D.arrivals.filter(a=>a.email!==extra.email);}
+    if(action==="setTask"){D.tasks[extra.task]={done:extra.done};}
+    if(action==="walkIn"){D.arrivals.push({email:extra.email||("walkin-"+Date.now()),name:extra.name,company:extra.company,arrived:new Date().toISOString(),walkin:true});}
+    if(action==="deleteGuests"){const w=new Set(extra.keys);D.guests=D.guests.filter(g=>!w.has(k(g.email))&&!w.has("n:"+k(g.first+" "+g.last)));D.rsvps=D.rsvps.filter(r=>!w.has(k(r.email)));D.arrivals=D.arrivals.filter(a=>!w.has(k(a.email)));result={deleted:w.size};}
+    if(action==="removeGuest"){D.guests=D.guests.filter(g=>g.email!==extra.email);}
+    if(action==="sendReminders"){let n=0;D.guests.forEach(g=>{if(g.sent&&!g.reminded&&!D.rsvps.some(r=>r.email===g.email)){g.reminded=new Date().toISOString();n++;}});result={sent:n,skipped:0};}
+    return JSON.parse(JSON.stringify({ok:true,result,data:D}));
+  }
+  function runner(ok,fail){return new Proxy({},{get(_,p){if(p==="withSuccessHandler")return f=>runner(f,fail);if(p==="withFailureHandler")return f=>runner(ok,f);return(...a)=>setTimeout(()=>ok(api(p==="adminApi"?a[0]:"",a[1],a[2])),150);}});}
+  window.google={script:{run:runner(()=>{},()=>{})}};
+})();
+</script>
