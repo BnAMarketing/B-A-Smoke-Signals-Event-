@@ -2,7 +2,7 @@
    Google services (Sheet, LockService, MailApp) and checks RSVPs never wait on the sheet lock,
    sends lock per guest, and mid-send deletes can't mis-stamp rows.
    Run:   node tests/lock_test.js            (optional arg: path to another Code.js)
-   Pass:  prints "16/16 passed" and exits 0.  The pre-fix code crashes with "Lock timeout".
+   Pass:  prints "23/23 passed" and exits 0.  The pre-fix code crashes with "Lock timeout".
    Blind spots: fakes model single-threaded lock contention only; no real quotas, no real Sheets latency,
    no HTML/client code. */
 const fs = require("fs"), vm = require("vm"), path = require("path");
@@ -39,7 +39,9 @@ function setup() {
   ctx.SpreadsheetApp = { getActiveSpreadsheet: () => ss, getUi() { throw new Error("no ui"); } };
   ctx.PropertiesService = { getScriptProperties: () => ({ getProperty: () => "pw" }) };
   ctx.CacheService = { getScriptCache: () => ({ get: () => null, put() {} }) };
-  ctx.Utilities = { sleep() {} };
+  ctx.Utilities = { sleep() {}, DigestAlgorithm: { SHA_256: "sha256" },
+    computeDigest: (alg, txt) => [...require("crypto").createHash(alg).update(txt).digest()],
+    base64EncodeWebSafe: b => Buffer.from(b).toString("base64").replace(/\+/g, "-").replace(/\//g, "_") };
   ctx.ContentService = { createTextOutput: t => ({ text: t, setMimeType() { return this; } }), MimeType: { JSON: "json" } };
   ctx.HtmlService = {};
   ctx.Session = { getEffectiveUser: () => ({ getEmail: () => "o@x" }), getActiveUser: () => ({ getEmail: () => "o@x" }) };
@@ -118,6 +120,31 @@ function setup() {
   ctx.locks.script = false;
   const bad = ctx.adminApi("nope", "snapshot", {});
   check("wrong password is still refused", bad.ok === false && bad.error === "unauthorized");
+}
+
+// --- 6. Invite opened from a personal link: logged without the lock; shows on the guest; manual "sent" marks
+{
+  const { ctx, sheets } = setup();
+  ctx.adminApi("pw", "addGuests", { guests: [{ first: "Ann", last: "Lee", email: "Ann@X.com", company: "" }] });
+  const g0 = ctx.adminApi("pw", "snapshot", {}).data.guests[0];
+  const id = (g0.link.match(/[?&]g=([\w-]+)/) || [])[1] || "";
+  check("personal link carries a guest ID, not the email", id.length === 10 && !/ann%40|ann@/i.test(g0.link));
+  ctx.locks.script = true;
+  const out = ctx.doPost({ parameter: { viewed: "1", g: id }, postData: { contents: "" } });
+  ctx.locks.script = false;
+  check("view ping saves while the sheet lock is busy", out.text === "ok" && sheets["Views"].rows.length === 2);
+  check("bad view ping is refused, nothing saved", ctx.doPost({ parameter: { viewed: "1", g: "<x>" }, postData: { contents: "" } }).text === "missing" && sheets["Views"].rows.length === 2);
+  check("guest shows as opened (any email case)", !!ctx.adminApi("pw", "snapshot", {}).data.guests[0].viewed);
+  const m1 = ctx.adminApi("pw", "markSent", { emails: ["ann@x.com"], which: "sent", on: true });
+  const first = m1.data.guests[0].sent;
+  const m2 = ctx.adminApi("pw", "markSent", { emails: ["ann@x.com"], which: "sent", on: true });
+  check("mark sent stamps once and keeps the first date", !!first && m2.result.marked === 0 && m2.data.guests[0].sent === first);
+  const m3 = ctx.adminApi("pw", "markSent", { emails: ["ann@x.com"], which: "sent", on: false });
+  check("mark not sent clears it", m3.ok && m3.data.guests[0].sent === "");
+  ctx.adminApi("pw", "markSent", { emails: ["ann@x.com"], which: "sent", on: true });
+  ctx.adminApi("pw", "markSent", { emails: ["ann@x.com"], which: "reminded", on: true });
+  const m4 = ctx.adminApi("pw", "markSent", { emails: ["ann@x.com"], which: "sent", on: false });
+  check("unmarking the invite clears the reminder too", m4.data.guests[0].reminded === "");
 }
 
 console.log(`\n${assertions - failures}/${assertions} passed`);

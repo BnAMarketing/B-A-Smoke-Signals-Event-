@@ -488,6 +488,16 @@ function fill(d){
 }
 try{const prev=JSON.parse(localStorage.getItem(LS)||"null");if(prev)fill(prev);}catch(e){}
 
+/* Personal link (?g=guest ID): tell the back office this guest opened the invite. Once per device, never blocks the page. */
+(function(){
+  let g="";
+  try{g=(new URLSearchParams(location.search).get("g")||"").trim();}catch(e){}
+  if(!/^[\w-]{6,20}$/.test(g)||!/^https:\/\/script\.google\.com\//.test(RSVP_URL))return;
+  try{if(localStorage.getItem("ss_viewed_"+g))return;}catch(e){}
+  fetch(RSVP_URL,{method:"POST",body:new URLSearchParams({viewed:"1",g:g})})
+    .then(r=>r.text()).then(t=>{if(t.trim()==="ok"){try{localStorage.setItem("ss_viewed_"+g,"1")}catch(e){}}}).catch(()=>{});
+})();
+
 /* Send the RSVP, retrying quietly. "unreachable" = the request never got an answer (blocked network,
    offline, extension); "busy" = the server answered but didn't confirm the save. */
 async function sendRsvp(data){

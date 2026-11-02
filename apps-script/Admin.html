@@ -124,6 +124,7 @@ main.views{flex:1;min-width:0;padding:28px 48px 64px 24px;max-width:1080px}
 .st.yes::before,.st.here::before{background:var(--ok)}
 .st.wait::before{background:var(--warn)}
 .st.new::before{background:var(--accent)}
+.st.seen::before{background:var(--surface);border:2px solid var(--warn);box-sizing:border-box}
 .st.here{color:var(--okText);font-weight:500}
 .sub{display:block;font-size:13px;color:var(--muted);overflow-wrap:anywhere}
 
@@ -145,6 +146,8 @@ details.menu summary:hover{background:var(--soft)}
 details.menu .pop{position:absolute;right:0;top:42px;z-index:10;background:var(--surface);border-radius:10px;box-shadow:0 8px 24px rgba(16,24,40,.14);padding:6px;min-width:190px}
 details.menu .pop button{appearance:none;cursor:pointer;border:0;background:none;width:100%;text-align:left;padding:0 12px;min-height:40px;border-radius:8px;font-size:14px;color:var(--danger)}
 details.menu .pop button:hover{background:#FEF3F2}
+details.menu .pop button.plain{color:var(--ink)}
+details.menu .pop button.plain:hover{background:var(--soft)}
 
 /* check-in */
 .cibig{display:flex;align-items:baseline;gap:8px}
@@ -271,7 +274,7 @@ dialog::backdrop{background:rgba(16,24,40,.45)}
     <!-- guests -->
     <section class="view" id="v-guests" hidden>
       <div class="head">
-        <div><h1>Guests<span class="c" id="gCount"></span></h1><p class="muted">Your invite list. Add guests here and see who still needs an email.</p></div>
+        <div><h1>Guests<span class="c" id="gCount"></span></h1><p class="muted">Your invite list. Mark who you've emailed, and see who opened their personal link and who replied.</p></div>
         <div class="row">
           <button class="btn text" type="button" id="csvBtn">CSV</button>
           <button class="btn ghost" type="button" id="xlsxBtn">Download Excel</button>
@@ -287,6 +290,8 @@ dialog::backdrop{background:rgba(16,24,40,.45)}
       </div>
       <div class="selbar" id="selbar" hidden><b id="selN" style="font-weight:500">0 selected</b>
         <button class="btn sm" type="button" id="selInvite">Send invite</button>
+        <button class="btn ghost sm" type="button" id="selMark">Mark invite sent</button>
+        <button class="btn ghost sm" type="button" id="selRemind">Mark reminder sent</button>
         <button class="btn danger sm" type="button" id="selDelete">Delete</button>
         <button class="btn text sm" type="button" id="selClear">Clear</button></div>
       <div class="tablewrap"><table>
@@ -576,23 +581,42 @@ function renderHome(P, k) {
 }
 
 /* Guests = the invite list: where each listed guest is in the email flow */
-const GF = [["all", "All"], ["invite", "Needs invite"], ["remind", "Needs reminder"], ["waiting", "Reminded"], ["replied", "Replied"]];
-function emailStage(p) { return p.reply ? "replied" : !p.sent ? "invite" : !p.reminded ? "remind" : "waiting"; }
+const GF = [["all", "All"], ["invite", "Needs invite"], ["sent", "Not opened"], ["viewed", "Opened"], ["yes", "Coming"], ["no", "Can't make it"]];
+function emailStage(p) { return p.reply === "yes" ? "yes" : p.reply === "no" ? "no" : !p.sent ? "invite" : p.viewed ? "viewed" : "sent"; }
 function emailStatus(p) {
   const st = emailStage(p);
-  if (st === "replied") return el("span", "st yes", "Replied");
+  if (st === "yes") return el("span", "st yes", "Coming");
+  if (st === "no") return el("span", "st no", "Can't make it");
   if (st === "invite") return el("span", "st new", "Needs invite");
-  if (st === "remind") return el("span", "st wait", "Needs reminder");
-  return el("span", "st", "Reminded, no reply yet");
+  if (st === "viewed") return el("span", "st seen", "Opened, no reply yet");
+  return el("span", "st wait", (p.reminded ? "Reminded" : "Invited") + ", not opened");
+}
+function emailSub(p) {
+  return [p.sent ? "Invited " + dateStr(p.sent) : "", p.reminded ? "reminded " + dateStr(p.reminded) : "", p.viewed ? "opened " + dateStr(p.viewed) : ""]
+    .filter(Boolean).join(" · ");
+}
+async function markSent(emails, which, on, label) {
+  try { const r = await apiPost("markSent", { emails, which, on }); toast(label + (emails.length > 1 ? " (" + plural(r.marked, "guest") + ")." : ".")); }
+  catch (e) { toast("That didn't save. Try again."); }
+}
+async function copyLink(p) {
+  try { await navigator.clipboard.writeText(p.link); toast("Copied " + nameOf(p) + "'s personal link."); }
+  catch (e) { window.prompt("Copy " + nameOf(p) + "'s personal link:", p.link); }
 }
 const textMatch = (p, q) => !q || lc([p.first, p.last, p.email, p.company, p.role].join(" ")).includes(q);
 function gMatch(p) { return p.onList && textMatch(p, lc($("gq").value)) && (gFilter === "all" || emailStage(p) === gFilter); }
 function rowMenu(p) {
   const d = el("details", "menu"); const s = el("summary"); s.setAttribute("aria-label", "More actions for " + nameOf(p));
   s.innerHTML = '<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>';
-  const pop = el("div", "pop"); const x = el("button", null, "Delete guest"); x.type = "button";
-  x.onclick = () => { d.open = false; deleteKeys([p.key], nameOf(p)); };
-  pop.append(x); d.append(s, pop); return d;
+  const pop = el("div", "pop");
+  const item = (txt, fn, cls) => { const b = el("button", cls || null, txt); b.type = "button"; b.onclick = () => { d.open = false; fn(); }; pop.append(b); };
+  if (p.onList && p.email) {
+    item(p.sent ? "Mark invite not sent" : "Mark invite sent", () => markSent([p.email], "sent", !p.sent, nameOf(p) + (p.sent ? " marked not invited" : " marked invited")), "plain");
+    if (p.sent) item(p.reminded ? "Clear reminder" : "Mark reminder sent", () => markSent([p.email], "reminded", !p.reminded, nameOf(p) + (p.reminded ? "'s reminder cleared" : " marked reminded")), "plain");
+    if (p.link) item("Copy personal link", () => copyLink(p), "plain");
+  }
+  item("Delete guest", () => deleteKeys([p.key], nameOf(p)));
+  d.append(s, pop); return d;
 }
 function renderGuests(P) {
   const L = P.filter(p => p.onList);
@@ -601,7 +625,7 @@ function renderGuests(P) {
   GF.forEach(([k, l]) => { const n = k === "all" ? L.length : L.filter(p => emailStage(p) === k).length; if (!n && k !== "all" && gFilter !== k) return;
     const b = el("button", null, l + " · " + n); b.type = "button"; b.setAttribute("aria-pressed", String(gFilter === k));
     b.onclick = () => { gFilter = k; renderGuests(people()); }; f.append(b); });
-  const order = { invite: 0, remind: 1, waiting: 2, replied: 3 };  // who still needs an email comes first
+  const order = { invite: 0, sent: 1, viewed: 2, yes: 3, no: 4 };  // who still needs an email comes first
   const rows = L.filter(gMatch).sort((a, b) => order[emailStage(a)] - order[emailStage(b)] || lc(a.first + a.last).localeCompare(lc(b.first + b.last))), tb = $("gbody"); tb.textContent = "";
   if (!rows.length) { const tr = el("tr"); const td = el("td", "empty", L.length ? "No guests match." : "No guests yet. Use Add guests to type them in or paste a list from Excel."); td.colSpan = 5; tr.append(td); tb.append(tr); }
   rows.forEach(p => {
@@ -613,7 +637,7 @@ function renderGuests(P) {
     if (p.notes) c1.append(el("span", "sub", p.notes));
     const c2 = el("td"); c2.append(document.createTextNode(p.company || "")); if (p.role) c2.append(el("span", "sub", p.role));
     const c3 = el("td"); c3.append(emailStatus(p));
-    if (p.sent) c3.append(el("span", "sub", "Invited " + dateStr(p.sent) + (p.reminded ? " · reminded " + dateStr(p.reminded) : "")));
+    if (emailSub(p)) c3.append(el("span", "sub", emailSub(p)));
     const c4 = el("td"); c4.append(rowMenu(p));
     tr.append(c0, c1, c2, c3, c4); tb.append(tr);
   });
@@ -774,6 +798,16 @@ $("selInvite").onclick = async () => {
   if (!await confirmBox("Send invitations?", "Email the invitation to " + plural(emails.length, "selected guest") + ". Anyone already invited gets it again.")) return;
   try { const r = await apiPost("sendInvites", { emails }); sel.clear(); renderGuests(people()); toast(sendReport(r, "invitation")); } catch (e) { toast(e.message || "Sending failed."); }
 };
+$("selMark").onclick = () => {
+  const emails = people().filter(p => sel.has(p.key) && p.onList && p.email && !p.sent).map(p => p.email);
+  if (!emails.length) { toast("Everyone selected is already marked invited."); return; }
+  markSent(emails, "sent", true, "Marked invited").then(() => { sel.clear(); renderGuests(people()); });
+};
+$("selRemind").onclick = () => {
+  const emails = people().filter(p => sel.has(p.key) && p.onList && p.email && p.sent && !p.reminded).map(p => p.email);
+  if (!emails.length) { toast("No one selected is invited and still waiting on a reminder."); return; }
+  markSent(emails, "reminded", true, "Marked reminded").then(() => { sel.clear(); renderGuests(people()); });
+};
 /* Delete people everywhere (guest list, RSVP, check-in). Asks first. */
 async function deleteKeys(keys, label) {
   const who = keys.length === 1 ? label : plural(keys.length, "guest");
@@ -803,12 +837,12 @@ $("addSave").onclick = async () => {
 
 /* exports: each screen downloads what it shows */
 const fmtReply = p => p.reply === "yes" ? "Attending" : p.reply === "no" ? "Declined" : "";
-const STAGE = { invite: "Needs invite", remind: "Needs reminder", waiting: "Reminded, no reply", replied: "Replied" };
+const STAGE = { invite: "Needs invite", sent: "Invited, not opened", viewed: "Opened, no reply", yes: "Coming", no: "Can't make it" };
 function exportRows(kind) {
   if (kind === "rsvps") return [["First name", "Last name", "Email", "Company", "Role", "RSVP", "Replied", "On guest list", "Checked in"]].concat(people().filter(rMatch).map(p => [
     p.first || "", p.last || "", p.email || "", p.company || "", p.role || "", fmtReply(p), dtStr(p.replied), p.onList ? "Yes" : "No", dtStr(p.arrived)]));
-  return [["First name", "Last name", "Email", "Company", "Email status", "Invite sent", "Reminder sent", "RSVP", "Notes"]].concat(people().filter(gMatch).map(p => [
-    p.first || "", p.last || "", p.email || "", p.company || "", STAGE[emailStage(p)], dtStr(p.sent), dtStr(p.reminded), fmtReply(p), p.notes || ""]));
+  return [["First name", "Last name", "Email", "Company", "Status", "Invite sent", "Reminder sent", "Opened", "RSVP", "Personal link", "Notes"]].concat(people().filter(gMatch).map(p => [
+    p.first || "", p.last || "", p.email || "", p.company || "", STAGE[emailStage(p)], dtStr(p.sent), dtStr(p.reminded), dtStr(p.viewed), fmtReply(p), p.link || "", p.notes || ""]));
 }
 function fname(kind, ext) { return "smoke-signals-" + (kind === "rsvps" ? "rsvps" : "guest-list") + "-" + new Date().toISOString().slice(0, 10) + "." + ext; }
 function save(blob, name) { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }

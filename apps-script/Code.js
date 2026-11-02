@@ -26,6 +26,8 @@ const TRACKER = "Tracker";
 const G_HEAD = ["Send", "First name", "Last name", "Email", "Company", "RSVP status", "Invite sent", "Reminder sent", "Personal link", "Notes"];
 const C = { send: 1, first: 2, last: 3, email: 4, company: 5, status: 6, sent: 7, reminded: 8, link: 9, notes: 10 };
 const CI_HEAD = ["Email", "Name", "Company", "Arrived", "Walk-in", "Checked in by"];
+const VIEWS = "Views";
+const V_HEAD = ["Opened", "Guest ID"];
 const DEFAULT_SETTINGS = [
   ["Invite link", "https://YOURNAME.github.io/smoke-signals-rsvp/", "Your GitHub invite page"],
   ["Envelope image link", "https://YOURNAME.github.io/smoke-signals-rsvp/assets/smoke-signals-invite.gif", "Shown in the email"],
@@ -95,6 +97,12 @@ function doPost(e) {
   /* Guest RSVP: append right away, no lock. Appends only ever add below the last row,
      so nothing the back office does can collide with them, and a long send can't make an RSVP time out. */
   const p = e.parameter || {};
+  /* Invite opened from a personal link: same no-lock append as RSVPs. */
+  if (p.viewed) {
+    if (!/^[\w-]{6,20}$/.test(String(p.g || ""))) return ContentService.createTextOutput("missing");
+    try { viewsSheet_().appendRow([new Date(), String(p.g)]); } catch (err) { return ContentService.createTextOutput("error"); }
+    return ContentService.createTextOutput("ok");
+  }
   if (!p.email) return ContentService.createTextOutput("missing");
   try {
     getSheet_().appendRow([new Date(), clean_(p.first), clean_(p.last), clean_(p.email), clean_(p.role), clean_(p.company), clean_(p.attending)]);
@@ -112,6 +120,7 @@ function action_(b) {
   switch (b.action) {
     case "addGuests": return addGuests_(b.guests || []);
     case "updateGuest": return updateGuest_(b.email, b.fields || {});
+    case "markSent": return markSent_(b.emails || [], b.which === "reminded" ? C.reminded : C.sent, !!b.on);
     case "removeGuest": return removeGuest_(b.email);
     case "deleteGuests": return deleteGuests_(b.keys || []);
     case "checkIn": return checkIn_(b.email, b.name, b.company, false, b.by);
@@ -165,13 +174,20 @@ function snapshot_() {
   refreshStatus_();
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const g = ss.getSheetByName(GUESTS);
+  const cfg = settings_();
+  const base = inviteBase_(cfg);
+  const opened = viewsById_();
   const guests = g.getLastRow() < 2 ? [] : g.getRange(2, 1, g.getLastRow() - 1, G_HEAD.length).getValues()
     .filter(r => String(r[C.email - 1]).trim() || String(r[C.first - 1]).trim())
-    .map(r => ({
-      first: String(r[C.first - 1]), last: String(r[C.last - 1]), email: String(r[C.email - 1]).trim(),
-      company: String(r[C.company - 1]), status: String(r[C.status - 1]),
-      sent: iso_(r[C.sent - 1]), reminded: iso_(r[C.reminded - 1]), link: String(r[C.link - 1]), notes: String(r[C.notes - 1] || "")
-    }));
+    .map(r => {
+      const email = String(r[C.email - 1]).trim(), id = guestId_(email);
+      return {
+        first: String(r[C.first - 1]), last: String(r[C.last - 1]), email: email,
+        company: String(r[C.company - 1]), status: String(r[C.status - 1]),
+        sent: iso_(r[C.sent - 1]), reminded: iso_(r[C.reminded - 1]), notes: String(r[C.notes - 1] || ""),
+        link: email ? personalLink_(base, r[C.first - 1], r[C.last - 1], email) : "", viewed: iso_(opened[id])
+      };
+    });
   const rv = getSheet_().getDataRange().getValues().slice(1).filter(r => r.join("") !== "").map(r => ({
     submitted: iso_(r[0]), first: String(r[1]), last: String(r[2]), email: String(r[3]).trim(),
     role: String(r[4]), company: String(r[5]), attending: String(r[6])
@@ -183,7 +199,6 @@ function snapshot_() {
   const tr = ss.getSheetByName(TRACKER);
   const tasks = {};
   if (tr.getLastRow() > 1) tr.getRange(2, 1, tr.getLastRow() - 1, 3).getValues().forEach(r => { if (r[0]) tasks[String(r[0])] = { done: r[1] === true, at: iso_(r[2]) }; });
-  const cfg = settings_();
   const settings = {};
   EDITABLE_SETTINGS.forEach(k => settings[k] = cfg[k] instanceof Date ? iso_(cfg[k]) : String(cfg[k] == null ? "" : cfg[k]));
   settings["Automatic sending"] = String(cfg["Automatic sending"] || "Off");
@@ -239,6 +254,24 @@ function updateGuest_(email, f) {
   if ("company" in f) g.getRange(row, C.company).setValue(clean_(f.company));
   if ("status" in f && /^(Attending|Declined|)$/.test(f.status)) g.getRange(row, C.status).setValue(f.status);
   return "ok";
+}
+/* Emails go out from Power Automate, so the team marks invites and reminders sent by hand. */
+function markSent_(emails, col, on) {
+  const g = guests_();
+  if (g.getLastRow() < 2) return { marked: 0 };
+  const want = {};
+  emails.forEach(e => { const v = String(e || "").toLowerCase().trim(); if (v) want[v] = true; });
+  const vals = g.getRange(2, C.email, g.getLastRow() - 1, 1).getValues();
+  let marked = 0;
+  vals.forEach((r, i) => {
+    if (!want[String(r[0]).toLowerCase().trim()]) return;
+    const cell = g.getRange(i + 2, col);
+    if (on && cell.getValue()) return;  // keep the first date it was sent
+    cell.setValue(on ? new Date() : "");
+    if (!on && col === C.sent) g.getRange(i + 2, C.reminded).setValue("");  // no reminder without an invite
+    marked++;
+  });
+  return { marked: marked };
 }
 function removeGuest_(email) {
   const row = findGuestRow_(email);
@@ -366,6 +399,7 @@ function ensureTabs_() {
     c.setFrozenRows(1);
     c.getRange("D:D").setNumberFormat("mmm d h:mm am/pm");
   }
+  viewsSheet_();
   let t = ss.getSheetByName(TRACKER);
   if (!t) {
     t = ss.insertSheet(TRACKER);
@@ -412,10 +446,40 @@ function guests_() {
   return g;
 }
 function esc_(v) { return String(v == null ? "" : v).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
-function personalLink_(base, first, last) {
+function personalLink_(base, first, last, email) {
   if (!base) return "";
   const name = (String(first) + " " + String(last)).trim();
-  return base + (base.indexOf("?") < 0 ? "?" : "&") + "to=" + encodeURIComponent(name);
+  const id = email ? "&g=" + guestId_(email) : "";
+  return base + (base.indexOf("?") < 0 ? "?" : "&") + "to=" + encodeURIComponent(name) + id;
+}
+/* The invite page link from Settings, or the live page while Settings still has the placeholder. */
+function inviteBase_(cfg) {
+  const b = String(cfg["Invite link"] || "").trim();
+  return !b || b.indexOf("YOURNAME") >= 0 ? INVITE_URL : b;
+}
+/* Short ID for a guest's personal link: a hash of their email, so the email never appears in a URL. */
+function guestId_(email) {
+  const em = String(email || "").toLowerCase().trim();
+  if (!em) return "";
+  return Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, "smoke-signals:" + em)).slice(0, 10);
+}
+/* Views tab: one row each time a personal link is opened (appended by doPost, no lock). */
+function viewsSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let v = ss.getSheetByName(VIEWS);
+  if (!v) {
+    v = ss.insertSheet(VIEWS);
+    v.getRange(1, 1, 1, V_HEAD.length).setValues([V_HEAD]).setFontWeight("bold");
+    v.setFrozenRows(1);
+  }
+  return v;
+}
+/* Guest ID -> first time that guest opened the invite */
+function viewsById_() {
+  const v = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(VIEWS), map = {};
+  if (!v || v.getLastRow() < 2) return map;
+  v.getRange(2, 1, v.getLastRow() - 1, 2).getValues().forEach(r => { const id = String(r[1]); if (id && !map[id]) map[id] = r[0]; });
+  return map;
 }
 function validEmail_(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e).trim()); }
 
@@ -501,7 +565,7 @@ function sendRows_(rowFilter, reminder, confirmText) {
     const email = String(r[C.email - 1]).trim();
     if (!validEmail_(email)) { skipped++; withScriptLock_(() => { const row = currentGuestRow_(g, i, email); if (row > 0) g.getRange(row, C.status).setValue("Check email address"); }); return; }
     if (sent >= quota) { skipped++; return; }
-    const link = personalLink_(base, r[C.first - 1], r[C.last - 1]);
+    const link = personalLink_(base, r[C.first - 1], r[C.last - 1], email);
     const opts = {
       to: email,
       subject: String(reminder ? cfg["Reminder subject"] : cfg["Email subject"]),
