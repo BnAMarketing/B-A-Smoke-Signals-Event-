@@ -124,6 +124,7 @@ main.views{flex:1;min-width:0;padding:28px 48px 64px 24px;max-width:1080px}
 .st.yes::before,.st.here::before{background:var(--ok)}
 .st.wait::before{background:var(--warn)}
 .st.new::before{background:var(--accent)}
+.st.bad::before{background:var(--danger)}
 .st.seen::before{background:var(--surface);border:2px solid var(--warn);box-sizing:border-box}
 .st.here{color:var(--okText);font-weight:500}
 .sub{display:block;font-size:13px;color:var(--muted);overflow-wrap:anywhere}
@@ -292,6 +293,7 @@ dialog::backdrop{background:rgba(16,24,40,.45)}
         <button class="btn sm" type="button" id="selInvite">Send invite</button>
         <button class="btn ghost sm" type="button" id="selMark">Mark invite sent</button>
         <button class="btn ghost sm" type="button" id="selRemind">Mark reminder sent</button>
+        <button class="btn ghost sm" type="button" id="selBounce">Mark bounced</button>
         <button class="btn danger sm" type="button" id="selDelete">Delete</button>
         <button class="btn text sm" type="button" id="selClear">Clear</button></div>
       <div class="tablewrap"><table>
@@ -510,7 +512,7 @@ function people() {
 }
 const nameOf = p => ((p.first || "") + " " + (p.last || "")).trim() || p.email || "Guest";
 const unsentOf = P => P.filter(p => p.onList && p.email && !p.sent);
-const remindOf = P => P.filter(p => p.onList && p.sent && !p.reminded && !p.reply);
+const remindOf = P => P.filter(p => p.onList && p.sent && !p.reminded && !p.reply && p.status !== "Bounced");
 
 /* Plain-language status, used everywhere */
 function status(p, ignoreArrival) {
@@ -581,12 +583,14 @@ function renderHome(P, k) {
 }
 
 /* Guests = the invite list: where each listed guest is in the email flow */
-const GF = [["all", "All"], ["invite", "Needs invite"], ["sent", "Not opened"], ["viewed", "Opened"], ["yes", "Coming"], ["no", "Can't make it"]];
-function emailStage(p) { return p.reply === "yes" ? "yes" : p.reply === "no" ? "no" : !p.sent ? "invite" : p.viewed ? "viewed" : "sent"; }
+const GF = [["all", "All"], ["bounced", "Bounced"], ["invite", "Needs invite"], ["sent", "Not opened"], ["viewed", "Opened"], ["yes", "Coming"], ["no", "Can't make it"]];
+const bouncedOf = p => p.onList && p.status === "Bounced" && !p.reply;
+function emailStage(p) { return p.reply === "yes" ? "yes" : p.reply === "no" ? "no" : bouncedOf(p) ? "bounced" : !p.sent ? "invite" : p.viewed ? "viewed" : "sent"; }
 function emailStatus(p) {
   const st = emailStage(p);
   if (st === "yes") return el("span", "st yes", "Coming");
   if (st === "no") return el("span", "st no", "Can't make it");
+  if (st === "bounced") return el("span", "st bad", "Bounced, email them by hand");
   if (st === "invite") return el("span", "st new", "Needs invite");
   if (st === "viewed") return el("span", "st seen", "Opened, no reply yet");
   return el("span", "st wait", (p.reminded ? "Reminded" : "Invited") + ", not opened");
@@ -597,6 +601,10 @@ function emailSub(p) {
 }
 async function markSent(emails, which, on, label) {
   try { const r = await apiPost("markSent", { emails, which, on }); toast(label + (emails.length > 1 ? " (" + plural(r.marked, "guest") + ")." : ".")); }
+  catch (e) { toast("That didn't save. Try again."); }
+}
+async function markBounced(emails, on, label) {
+  try { const r = await apiPost("markBounced", { emails, on }); toast(label + (emails.length > 1 ? " (" + plural(r.marked, "guest") + ")." : ".")); }
   catch (e) { toast("That didn't save. Try again."); }
 }
 async function copyLink(p) {
@@ -613,6 +621,7 @@ function rowMenu(p) {
   if (p.onList && p.email) {
     item(p.sent ? "Mark invite not sent" : "Mark invite sent", () => markSent([p.email], "sent", !p.sent, nameOf(p) + (p.sent ? " marked not invited" : " marked invited")), "plain");
     if (p.sent) item(p.reminded ? "Clear reminder" : "Mark reminder sent", () => markSent([p.email], "reminded", !p.reminded, nameOf(p) + (p.reminded ? "'s reminder cleared" : " marked reminded")), "plain");
+    if (!p.reply) item(bouncedOf(p) ? "Clear bounced" : "Mark bounced", () => markBounced([p.email], !bouncedOf(p), nameOf(p) + (bouncedOf(p) ? " is no longer marked bounced" : " marked bounced")), "plain");
     if (p.link) item("Copy personal link", () => copyLink(p), "plain");
   }
   item("Delete guest", () => deleteKeys([p.key], nameOf(p)));
@@ -625,7 +634,7 @@ function renderGuests(P) {
   GF.forEach(([k, l]) => { const n = k === "all" ? L.length : L.filter(p => emailStage(p) === k).length; if (!n && k !== "all" && gFilter !== k) return;
     const b = el("button", null, l + " · " + n); b.type = "button"; b.setAttribute("aria-pressed", String(gFilter === k));
     b.onclick = () => { gFilter = k; renderGuests(people()); }; f.append(b); });
-  const order = { invite: 0, sent: 1, viewed: 2, yes: 3, no: 4 };  // who still needs an email comes first
+  const order = { bounced: 0, invite: 1, sent: 2, viewed: 3, yes: 4, no: 5 };  // who still needs an email comes first
   const rows = L.filter(gMatch).sort((a, b) => order[emailStage(a)] - order[emailStage(b)] || lc(a.first + a.last).localeCompare(lc(b.first + b.last))), tb = $("gbody"); tb.textContent = "";
   if (!rows.length) { const tr = el("tr"); const td = el("td", "empty", L.length ? "No guests match." : "No guests yet. Use Add guests to type them in or paste a list from Excel."); td.colSpan = 5; tr.append(td); tb.append(tr); }
   rows.forEach(p => {
@@ -808,6 +817,11 @@ $("selRemind").onclick = () => {
   if (!emails.length) { toast("No one selected is invited and still waiting on a reminder."); return; }
   markSent(emails, "reminded", true, "Marked reminded").then(() => { sel.clear(); renderGuests(people()); });
 };
+$("selBounce").onclick = () => {
+  const emails = people().filter(p => sel.has(p.key) && p.onList && p.email && !p.reply && !bouncedOf(p)).map(p => p.email);
+  if (!emails.length) { toast("No one selected can be marked bounced (they replied or already are)."); return; }
+  markBounced(emails, true, "Marked bounced").then(() => { sel.clear(); renderGuests(people()); });
+};
 /* Delete people everywhere (guest list, RSVP, check-in). Asks first. */
 async function deleteKeys(keys, label) {
   const who = keys.length === 1 ? label : plural(keys.length, "guest");
@@ -837,7 +851,7 @@ $("addSave").onclick = async () => {
 
 /* exports: each screen downloads what it shows */
 const fmtReply = p => p.reply === "yes" ? "Attending" : p.reply === "no" ? "Declined" : "";
-const STAGE = { invite: "Needs invite", sent: "Invited, not opened", viewed: "Opened, no reply", yes: "Coming", no: "Can't make it" };
+const STAGE = { bounced: "Bounced", invite: "Needs invite", sent: "Invited, not opened", viewed: "Opened, no reply", yes: "Coming", no: "Can't make it" };
 function exportRows(kind) {
   if (kind === "rsvps") return [["First name", "Last name", "Email", "Company", "Role", "RSVP", "Replied", "On guest list", "Checked in"]].concat(people().filter(rMatch).map(p => [
     p.first || "", p.last || "", p.email || "", p.company || "", p.role || "", fmtReply(p), dtStr(p.replied), p.onList ? "Yes" : "No", dtStr(p.arrived)]));

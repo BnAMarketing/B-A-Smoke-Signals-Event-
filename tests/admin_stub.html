@@ -6,7 +6,7 @@
   const fn=["Avery","Jordan","Riley","Casey","Morgan","Taylor","Quinn","Reese","Parker","Drew","Rowan","Sage"];
   const ln=["Hale","Brooks","Nguyen","Patel","Ortiz","Kim","Shaw","Reid","Lane","Cole","Ford","Wells"];
   const D={guests:[],rsvps:[],arrivals:[],tasks:{script:{done:true},site:{done:true},guests:{done:true}},settings:{"Invite link":"https://bnamarketing.github.io/B-A-Smoke-Signals-Event-/","Envelope image link":"","Email subject":"You're invited","Reminder subject":"","Sender name":"B&A","Reply-to email":"","RSVP deadline":"","Venue capacity":"60","Automatic sending":"Off","Send invites on":"","Send reminders on":""},quota:94,now:new Date().toISOString()};
-  for(let i=0;i<24;i++){const e="guest"+i+"@example.com",sent=i<20?iso(9):"";D.guests.push({first:fn[i%12],last:ln[(i*5)%12],email:e,company:co[i%8],status:"",sent,reminded:i<4?iso(2):"",link:"https://bnamarketing.github.io/B-A-Smoke-Signals-Event-/?to=Guest&g=fake"+i,viewed:i>=8&&i<16?iso(1,i):"",notes:i===3?"VIP":""});
+  for(let i=0;i<24;i++){const e="guest"+i+"@example.com",sent=i<20?iso(9):"";D.guests.push({first:fn[i%12],last:ln[(i*5)%12],email:e,company:co[i%8],status:i===18||i===19?"Bounced":"",sent,reminded:i<4?iso(2):"",link:"https://bnamarketing.github.io/B-A-Smoke-Signals-Event-/?to=Guest&g=fake"+i,viewed:i>=8&&i<16?iso(1,i):"",notes:i===3?"VIP":""});
     if(i<10)D.rsvps.push({submitted:iso(i%5,i),first:fn[i%12],last:ln[(i*5)%12],email:e,role:"Program Manager",company:co[i%8],attending:i%4===3?"No":"Yes"});}
   D.rsvps.push({submitted:iso(0,2),first:"Direct",last:"Rsvp",email:"direct@example.com",role:"",company:"Walk Co",attending:"Yes"});
   D.arrivals.push({email:"guest1@example.com",name:"x",company:"",arrived:iso(0,1),walkin:false,by:""});
@@ -20,6 +20,7 @@
     if(action==="walkIn"){D.arrivals.push({email:extra.email||("walkin-"+Date.now()),name:extra.name,company:extra.company,arrived:new Date().toISOString(),walkin:true});}
     if(action==="deleteGuests"){const w=new Set(extra.keys);D.guests=D.guests.filter(g=>!w.has(k(g.email))&&!w.has("n:"+k(g.first+" "+g.last)));D.rsvps=D.rsvps.filter(r=>!w.has(k(r.email)));D.arrivals=D.arrivals.filter(a=>!w.has(k(a.email)));result={deleted:w.size};}
     if(action==="markSent"){const w=new Set(extra.emails.map(k));let n=0;const f=extra.which==="reminded"?"reminded":"sent";D.guests.forEach(g=>{if(w.has(k(g.email))&&!(extra.on&&g[f])){g[f]=extra.on?new Date().toISOString():"";if(!extra.on&&f==="sent")g.reminded="";n++;}});result={marked:n};}
+    if(action==="markBounced"){const w=new Set(extra.emails.map(k));let n=0;D.guests.forEach(g=>{if(!w.has(k(g.email))||/Attending|Declined/.test(g.status))return;if(extra.on&&g.status!=="Bounced"){g.status="Bounced";if(!g.sent)g.sent=new Date().toISOString();n++;}if(!extra.on&&g.status==="Bounced"){g.status="";n++;}});result={marked:n};}
     if(action==="removeGuest"){D.guests=D.guests.filter(g=>g.email!==extra.email);}
     if(action==="sendReminders"){let n=0;D.guests.forEach(g=>{if(g.sent&&!g.reminded&&!D.rsvps.some(r=>r.email===g.email)){g.reminded=new Date().toISOString();n++;}});result={sent:n,skipped:0};}
     return JSON.parse(JSON.stringify({ok:true,result,data:D}));

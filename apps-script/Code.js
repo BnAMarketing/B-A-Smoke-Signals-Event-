@@ -121,6 +121,7 @@ function action_(b) {
     case "addGuests": return addGuests_(b.guests || []);
     case "updateGuest": return updateGuest_(b.email, b.fields || {});
     case "markSent": return markSent_(b.emails || [], b.which === "reminded" ? C.reminded : C.sent, !!b.on);
+    case "markBounced": return markBounced_(b.emails || [], !!b.on);
     case "removeGuest": return removeGuest_(b.email);
     case "deleteGuests": return deleteGuests_(b.keys || []);
     case "checkIn": return checkIn_(b.email, b.name, b.company, false, b.by);
@@ -130,7 +131,7 @@ function action_(b) {
     case "saveSettings": return saveSettings_(b.settings || {});
     case "sendInvites": return sendRows_(rowByEmail_(b.emails), false, null);
     case "sendUnsent": return sendRows_(r => r[C.email - 1] && !r[C.sent - 1], false, null);
-    case "sendReminders": return sendRows_(r => r[C.email - 1] && r[C.sent - 1] && !r[C.reminded - 1] && !/Attending|Declined/.test(r[C.status - 1]), true, null);
+    case "sendReminders": return sendRows_(r => r[C.email - 1] && r[C.sent - 1] && !r[C.reminded - 1] && !/Attending|Declined|Bounced/.test(r[C.status - 1]), true, null);
     case "sendTest": return sendTest_(b.to);
     case "ping": return "pong";
     default: throw new Error("Unknown action: " + b.action);
@@ -269,6 +270,32 @@ function markSent_(emails, col, on) {
     if (on && cell.getValue()) return;  // keep the first date it was sent
     cell.setValue(on ? new Date() : "");
     if (!on && col === C.sent) g.getRange(i + 2, C.reminded).setValue("");  // no reminder without an invite
+    marked++;
+  });
+  return { marked: marked };
+}
+/* Bounces only show up in the sender's Outlook, so the team marks them here by hand.
+   Stored in the RSVP status column; a later RSVP overwrites it (refreshStatus_). */
+function markBounced_(emails, on) {
+  const g = guests_();
+  if (g.getLastRow() < 2) return { marked: 0 };
+  const want = {};
+  emails.forEach(e => { const v = String(e || "").toLowerCase().trim(); if (v) want[v] = true; });
+  const n = g.getLastRow() - 1;
+  const vals = g.getRange(2, 1, n, G_HEAD.length).getValues();
+  let marked = 0;
+  vals.forEach((r, i) => {
+    if (!want[String(r[C.email - 1]).toLowerCase().trim()]) return;
+    const status = String(r[C.status - 1]);
+    if (/Attending|Declined/.test(status)) return;  // they replied after all
+    if (on) {
+      if (status === "Bounced") return;
+      g.getRange(i + 2, C.status).setValue("Bounced");
+      if (!r[C.sent - 1]) g.getRange(i + 2, C.sent).setValue(new Date());  // a bounce means it was sent
+    } else {
+      if (status !== "Bounced") return;
+      g.getRange(i + 2, C.status).setValue("");
+    }
     marked++;
   });
   return { marked: marked };
@@ -606,7 +633,7 @@ function sendToAllUnsent() {
 }
 function sendRemindersNow() {
   sheetOnly_();
-  report_(sendRows_(r => r[C.email - 1] && r[C.sent - 1] && !r[C.reminded - 1] && !/Attending|Declined/.test(r[C.status - 1]), true,
+  report_(sendRows_(r => r[C.email - 1] && r[C.sent - 1] && !r[C.reminded - 1] && !/Attending|Declined|Bounced/.test(r[C.status - 1]), true,
     "Send a reminder to {n} invited guest(s) who haven't replied?"), "reminder(s)");
 }
 function sendTest_(to) {
@@ -655,7 +682,7 @@ function autoRun() {
     const inviteAt = cfg["Send invites on"] instanceof Date ? cfg["Send invites on"] : null;
     const remindAt = cfg["Send reminders on"] instanceof Date ? cfg["Send reminders on"] : null;
     if (inviteAt && now >= inviteAt) sendRows_(r => r[C.email - 1] && !r[C.sent - 1], false, null);
-    if (remindAt && now >= remindAt) sendRows_(r => r[C.email - 1] && r[C.sent - 1] && !r[C.reminded - 1] && !/Attending|Declined/.test(r[C.status - 1]), true, null);
+    if (remindAt && now >= remindAt) sendRows_(r => r[C.email - 1] && r[C.sent - 1] && !r[C.reminded - 1] && !/Attending|Declined|Bounced/.test(r[C.status - 1]), true, null);
     withScriptLock_(refreshStatus_);
   } catch (err) {
     console.log("autoRun skipped: " + (err.message || err));  // e.g. a manual send is running; next hour retries

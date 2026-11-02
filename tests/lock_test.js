@@ -2,7 +2,7 @@
    Google services (Sheet, LockService, MailApp) and checks RSVPs never wait on the sheet lock,
    sends lock per guest, and mid-send deletes can't mis-stamp rows.
    Run:   node tests/lock_test.js            (optional arg: path to another Code.js)
-   Pass:  prints "23/23 passed" and exits 0.  The pre-fix code crashes with "Lock timeout".
+   Pass:  prints "27/27 passed" and exits 0.  The pre-fix code crashes with "Lock timeout".
    Blind spots: fakes model single-threaded lock contention only; no real quotas, no real Sheets latency,
    no HTML/client code. */
 const fs = require("fs"), vm = require("vm"), path = require("path");
@@ -145,6 +145,24 @@ function setup() {
   ctx.adminApi("pw", "markSent", { emails: ["ann@x.com"], which: "reminded", on: true });
   const m4 = ctx.adminApi("pw", "markSent", { emails: ["ann@x.com"], which: "sent", on: false });
   check("unmarking the invite clears the reminder too", m4.data.guests[0].reminded === "");
+}
+
+// --- 7. Bounces: marked by hand, stamps "sent", skipped by reminders, overwritten by a later RSVP
+{
+  const { ctx } = setup();
+  ctx.adminApi("pw", "addGuests", { guests: [{ first: "Bo", last: "U", email: "bo@x.com", company: "" }, { first: "Ok", last: "K", email: "ok@x.com", company: "" }] });
+  const b1 = ctx.adminApi("pw", "markBounced", { emails: ["BO@x.com"], on: true });
+  const bo = b1.data.guests.find(g => g.email === "bo@x.com");
+  check("mark bounced sets the status and an invite date", bo.status === "Bounced" && !!bo.sent);
+  ctx.adminApi("pw", "markSent", { emails: ["ok@x.com"], which: "sent", on: true });
+  ctx.sent.length = 0;
+  vm.runInContext("sendRows_(r => r[C.email - 1] && r[C.sent - 1] && !r[C.reminded - 1] && !/Attending|Declined|Bounced/.test(r[C.status - 1]), true, null)", ctx);
+  check("reminders skip bounced guests", ctx.sent.length === 1 && ctx.sent[0] === "ok@x.com");
+  ctx.doPost({ parameter: { first: "Bo", last: "U", email: "bo@x.com", attending: "Yes" }, postData: { contents: "" } });
+  const after = ctx.adminApi("pw", "snapshot", {}).data.guests.find(g => g.email === "bo@x.com");
+  check("a later RSVP replaces Bounced", after.status === "Attending");
+  const b2 = ctx.adminApi("pw", "markBounced", { emails: ["bo@x.com"], on: true });
+  check("can't mark someone bounced after they replied", b2.result.marked === 0);
 }
 
 console.log(`\n${assertions - failures}/${assertions} passed`);
