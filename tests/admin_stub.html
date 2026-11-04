@@ -21,6 +21,7 @@
     if(action==="deleteGuests"){const w=new Set(extra.keys);D.guests=D.guests.filter(g=>!w.has(k(g.email))&&!w.has("n:"+k(g.first+" "+g.last)));D.rsvps=D.rsvps.filter(r=>!w.has(k(r.email)));D.arrivals=D.arrivals.filter(a=>!w.has(k(a.email)));result={deleted:w.size};}
     if(action==="markSent"){const w=new Set(extra.emails.map(k));let n=0;const f=extra.which==="reminded"?"reminded":"sent";D.guests.forEach(g=>{if(w.has(k(g.email))&&!(extra.on&&g[f])){g[f]=extra.on?new Date().toISOString():"";if(!extra.on&&f==="sent")g.reminded="";n++;}});result={marked:n};}
     if(action==="markBounced"){const w=new Set(extra.emails.map(k));let n=0;D.guests.forEach(g=>{if(!w.has(k(g.email))||/Attending|Declined/.test(g.status))return;if(extra.on&&g.status!=="Bounced"){g.status="Bounced";if(!g.sent)g.sent=new Date().toISOString();n++;}if(!extra.on&&g.status==="Bounced"){g.status="";n++;}});result={marked:n};}
+    if(action==="addRsvp"){D.rsvps.push({submitted:new Date().toISOString(),first:extra.first,last:extra.last,email:extra.email||("wom-"+Date.now()),role:extra.role,company:extra.company,attending:extra.attending,source:"Word of mouth"});result="ok";}
     if(action==="removeGuest"){D.guests=D.guests.filter(g=>g.email!==extra.email);}
     if(action==="sendReminders"){let n=0;D.guests.forEach(g=>{if(g.sent&&!g.reminded&&!D.rsvps.some(r=>r.email===g.email)){g.reminded=new Date().toISOString();n++;}});result={sent:n,skipped:0};}
     return JSON.parse(JSON.stringify({ok:true,result,data:D}));

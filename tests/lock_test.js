@@ -2,7 +2,7 @@
    Google services (Sheet, LockService, MailApp) and checks RSVPs never wait on the sheet lock,
    sends lock per guest, and mid-send deletes can't mis-stamp rows.
    Run:   node tests/lock_test.js            (optional arg: path to another Code.js)
-   Pass:  prints "27/27 passed" and exits 0.  The pre-fix code crashes with "Lock timeout".
+   Pass:  prints "35/35 passed" and exits 0.  The pre-fix code crashes with "Lock timeout".
    Blind spots: fakes model single-threaded lock contention only; no real quotas, no real Sheets latency,
    no HTML/client code. */
 const fs = require("fs"), vm = require("vm"), path = require("path");
@@ -163,6 +163,27 @@ function setup() {
   check("a later RSVP replaces Bounced", after.status === "Attending");
   const b2 = ctx.adminApi("pw", "markBounced", { emails: ["bo@x.com"], on: true });
   check("can't mark someone bounced after they replied", b2.result.marked === 0);
+}
+
+// --- 8. Word of mouth: added by hand with or without an email; old sheets get the Source header
+{
+  const { ctx, sheets } = setup();
+  check("RSVPs tab has the Source header", sheets["RSVPs"].rows[0][7] === "Source");
+  sheets["RSVPs"].rows[0].length = 7;  // a sheet from before the column
+  ctx.adminApi("pw", "snapshot", {});
+  check("Source header is added to an existing sheet", sheets["RSVPs"].rows[0][7] === "Source");
+  const a = ctx.adminApi("pw", "addRsvp", { first: "Wes", last: "T", company: "=ACME", attending: "Yes" });
+  const r = a.data.rsvps[0];
+  check("word of mouth saves with no email, using a stand-in key", a.ok && /^wom-/.test(r.email) && r.source === "Word of mouth" && r.attending === "Yes");
+  check("word of mouth values are cleaned", r.company === "'=ACME");
+  const n = ctx.adminApi("pw", "addRsvp", { first: "Nia", email: "nia@x.com", attending: "No" });
+  check("word of mouth can record Can't make it", n.data.rsvps[1].attending === "No" && n.data.rsvps[1].email === "nia@x.com");
+  check("word of mouth needs a first name", ctx.adminApi("pw", "addRsvp", { first: " " }).ok === false);
+  check("word of mouth rejects a bad email", ctx.adminApi("pw", "addRsvp", { first: "X", email: "nope" }).ok === false);
+  const key = r.email.toLowerCase();
+  ctx.adminApi("pw", "checkIn", { email: key, name: "Wes T", company: "" });
+  const del = ctx.adminApi("pw", "deleteGuests", { keys: [key] });
+  check("no-email word of mouth can be checked in and deleted", del.ok && del.result.rsvpRows === 1 && del.result.checkinRows === 1);
 }
 
 console.log(`\n${assertions - failures}/${assertions} passed`);

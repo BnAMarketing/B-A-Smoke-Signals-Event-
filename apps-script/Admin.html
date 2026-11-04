@@ -306,10 +306,11 @@ dialog::backdrop{background:rgba(16,24,40,.45)}
     <!-- rsvps -->
     <section class="view" id="v-rsvps" hidden>
       <div class="head">
-        <div><h1>RSVPs<span class="c" id="rCount"></span></h1><p class="muted">Every reply from the invite page, newest first.</p></div>
+        <div><h1>RSVPs<span class="c" id="rCount"></span></h1><p class="muted">Every reply, newest first: from the invite page, or added here by word of mouth.</p></div>
         <div class="row">
           <button class="btn text" type="button" id="rCsvBtn">CSV</button>
           <button class="btn ghost" type="button" id="rXlsxBtn">Download Excel</button>
+          <button class="btn" type="button" id="womBtn">Add word of mouth</button>
         </div>
       </div>
       <div class="head">
@@ -414,6 +415,22 @@ dialog::backdrop{background:rgba(16,24,40,.45)}
   <div class="row"><button class="btn" type="button" id="walkSave">Check in</button><button class="btn text" type="button" id="walkCancel">Cancel</button></div>
 </form></dialog>
 
+<!-- word of mouth -->
+<dialog id="womDlg"><form class="dlg" id="womForm" method="dialog" novalidate>
+  <h2>Add word of mouth</h2>
+  <p class="muted" style="font-size:14px">For someone who replied in person or by text. They show on RSVPs and on the door list.</p>
+  <div class="seg" role="group" aria-label="Their reply"><button type="button" data-a="Yes" aria-pressed="true">Coming</button><button type="button" data-a="No" aria-pressed="false">Can't make it</button></div>
+  <div class="fgrid">
+    <label class="f"><span>First name</span><input type="text" id="mFirst"></label>
+    <label class="f"><span>Last name</span><input type="text" id="mLast"></label>
+    <label class="f"><span>Company (optional)</span><input type="text" id="mCompany"></label>
+    <label class="f"><span>Role (optional)</span><input type="text" id="mRole"></label>
+    <label class="f" style="grid-column:1/-1"><span>Email (optional)</span><input type="email" id="mEmail"></label>
+  </div>
+  <p class="msg" id="womMsg" role="status"></p>
+  <div class="row"><button class="btn" type="button" id="womSave">Add RSVP</button><button class="btn text" type="button" id="womCancel">Cancel</button></div>
+</form></dialog>
+
 <!-- confirm -->
 <dialog id="confDlg"><div class="dlg">
   <h2 id="confT">Are you sure?</h2><p class="muted" id="confB"></p>
@@ -500,12 +517,12 @@ function people() {
   D.rsvps.forEach(r => {
     const k = lc(r.email); if (!k) return;
     let p = map.get(k);
-    if (!p) { p = { key: k, onList: false, first: r.first, last: r.last, email: r.email, company: r.company, status: "", sent: "", reminded: "", notes: "" }; map.set(k, p); }
-    p.role = r.role || p.role; p.company = p.company || r.company; p.first = p.first || r.first; p.last = p.last || r.last;
+    if (!p) { p = { key: k, onList: false, first: r.first, last: r.last, email: /@/.test(r.email) ? r.email : "", company: r.company, status: "", sent: "", reminded: "", notes: "" }; map.set(k, p); }
+    p.source = r.source || p.source || ""; p.role = r.role || p.role; p.company = p.company || r.company; p.first = p.first || r.first; p.last = p.last || r.last;
     p.reply = r.attending === "Yes" ? "yes" : r.attending === "No" ? "no" : p.reply; p.replied = r.submitted;
   });
   const arr = new Map(D.arrivals.map(a => [lc(a.email), a]));
-  map.forEach(p => { const a = arr.get(lc(p.email)); p.arrived = a ? a.arrived : ""; p.walkin = a ? a.walkin : false;
+  map.forEach(p => { const a = arr.get(p.key); p.arrived = a ? a.arrived : ""; p.walkin = a ? a.walkin : false;
     if (!p.reply && /Attending/.test(p.status)) p.reply = "yes"; if (!p.reply && /Declined/.test(p.status)) p.reply = "no"; });
   D.arrivals.filter(a => a.walkin && !map.has(lc(a.email))).forEach(a => map.set(lc(a.email), { key: lc(a.email), onList: false, first: a.name, last: "", email: /@/.test(a.email) ? a.email : "", company: a.company, reply: "", arrived: a.arrived, walkin: true, sent: "", notes: "Walk-in" }));
   return [...map.values()].sort((a, b) => (b.replied || "").localeCompare(a.replied || "") || lc(a.first + a.last).localeCompare(lc(b.first + b.last)));
@@ -656,22 +673,23 @@ function renderGuests(P) {
 }
 
 /* RSVPs = replies only, including people who RSVP'd without being on the list */
-const RF = [["all", "All replies"], ["yes", "Coming"], ["no", "Can't make it"]];
-function rMatch(p) { return !!p.reply && textMatch(p, lc($("rq").value)) && (rFilter === "all" || p.reply === rFilter); }
+const RF = [["all", "All replies"], ["yes", "Coming"], ["no", "Can't make it"], ["wom", "Word of mouth"]];
+const rIn = (p, k) => k === "all" || (k === "wom" ? !!p.source : p.reply === k);
+function rMatch(p) { return !!p.reply && textMatch(p, lc($("rq").value)) && rIn(p, rFilter); }
 function renderRsvps(P) {
   const R = P.filter(p => p.reply);
   $("rCount").textContent = R.length;
   const f = $("rfilters"); f.textContent = "";
-  RF.forEach(([k, l]) => { const n = k === "all" ? R.length : R.filter(p => p.reply === k).length;
+  RF.forEach(([k, l]) => { const n = R.filter(p => rIn(p, k)).length; if (k === "wom" && !n && rFilter !== k) return;
     const b = el("button", null, l + " · " + n); b.type = "button"; b.setAttribute("aria-pressed", String(rFilter === k));
     b.onclick = () => { rFilter = k; renderRsvps(people()); }; f.append(b); });
   const rows = R.filter(rMatch), tb = $("rbody"); tb.textContent = "";
   if (!rows.length) { const tr = el("tr"); const td = el("td", "empty", R.length ? "No replies match." : "No replies yet. They show up here as guests RSVP on the invite."); td.colSpan = 5; tr.append(td); tb.append(tr); }
   rows.forEach(p => {
     const tr = el("tr");
-    const c1 = el("td"); c1.append(el("span", "nm", nameOf(p)), el("span", "sub", p.email || ""));
+    const c1 = el("td"); c1.append(el("span", "nm", nameOf(p)), el("span", "sub", p.email || "No email"));
     const c2 = el("td"); c2.append(document.createTextNode(p.company || "")); if (p.role) c2.append(el("span", "sub", p.role));
-    const c3 = el("td"); c3.append(status(p, true)); if (!p.onList) c3.append(el("span", "sub", "Not on the guest list"));
+    const c3 = el("td"); c3.append(status(p, true)); if (p.source) c3.append(el("span", "sub", p.source)); else if (!p.onList) c3.append(el("span", "sub", "Not on the guest list"));
     const c4 = el("td"); c4.append(el("span", "sub", dtStr(p.replied)));
     const c5 = el("td"); c5.append(rowMenu(p));
     tr.append(c1, c2, c3, c4, c5); tb.append(tr);
@@ -849,12 +867,28 @@ $("addSave").onclick = async () => {
   finally { $("addSave").disabled = false; }
 };
 
+/* word of mouth: a reply heard in person, added to RSVPs */
+let womReply = "Yes";
+const womPick = v => { womReply = v; document.querySelectorAll("#womForm [data-a]").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.a === v))); };
+document.querySelectorAll("#womForm [data-a]").forEach(b => b.onclick = () => womPick(b.dataset.a));
+$("womBtn").onclick = () => { womPick("Yes"); $("womMsg").textContent = ""; $("womDlg").showModal(); };
+$("womCancel").onclick = () => $("womDlg").close();
+$("womSave").onclick = async () => {
+  const m = $("womMsg"), g = { first: $("mFirst").value.trim(), last: $("mLast").value.trim(), company: $("mCompany").value.trim(), role: $("mRole").value.trim(), email: $("mEmail").value.trim(), attending: womReply };
+  if (!g.first) { m.className = "msg err"; m.textContent = "Add at least a first name."; return; }
+  if (g.email && !/^\S+@\S+\.\S+$/.test(g.email)) { m.className = "msg err"; m.textContent = "That email looks incomplete. Fix it or leave it blank."; return; }
+  $("womSave").disabled = true; m.className = "msg"; m.textContent = "Saving…";
+  try { await apiPost("addRsvp", g); $("womDlg").close(); ["mFirst", "mLast", "mCompany", "mRole", "mEmail"].forEach(i => $(i).value = ""); toast(g.first + " added to RSVPs."); }
+  catch (e) { m.className = "msg err"; m.textContent = "That didn't save. Try again."; }
+  finally { $("womSave").disabled = false; }
+};
+
 /* exports: each screen downloads what it shows */
 const fmtReply = p => p.reply === "yes" ? "Attending" : p.reply === "no" ? "Declined" : "";
 const STAGE = { bounced: "Bounced", invite: "Needs invite", sent: "Invited, not opened", viewed: "Opened, no reply", yes: "Coming", no: "Can't make it" };
 function exportRows(kind) {
-  if (kind === "rsvps") return [["First name", "Last name", "Email", "Company", "Role", "RSVP", "Replied", "On guest list", "Checked in"]].concat(people().filter(rMatch).map(p => [
-    p.first || "", p.last || "", p.email || "", p.company || "", p.role || "", fmtReply(p), dtStr(p.replied), p.onList ? "Yes" : "No", dtStr(p.arrived)]));
+  if (kind === "rsvps") return [["First name", "Last name", "Email", "Company", "Role", "RSVP", "Replied", "Source", "On guest list", "Checked in"]].concat(people().filter(rMatch).map(p => [
+    p.first || "", p.last || "", p.email || "", p.company || "", p.role || "", fmtReply(p), dtStr(p.replied), p.source || "Invite page", p.onList ? "Yes" : "No", dtStr(p.arrived)]));
   return [["First name", "Last name", "Email", "Company", "Status", "Invite sent", "Reminder sent", "Opened", "RSVP", "Personal link", "Notes"]].concat(people().filter(gMatch).map(p => [
     p.first || "", p.last || "", p.email || "", p.company || "", STAGE[emailStage(p)], dtStr(p.sent), dtStr(p.reminded), dtStr(p.viewed), fmtReply(p), p.link || "", p.notes || ""]));
 }

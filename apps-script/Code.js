@@ -18,7 +18,7 @@
 const ADMIN_PASSWORD = PropertiesService.getScriptProperties().getProperty("ADMIN_PASSWORD") || "";
 
 const SHEET_NAME = "RSVPs";
-const HEADERS = ["Submitted", "First name", "Last name", "Email", "Role / position", "Company", "Attending"];
+const HEADERS = ["Submitted", "First name", "Last name", "Email", "Role / position", "Company", "Attending", "Source"];
 const GUESTS = "Guests";
 const SETTINGS = "Settings";
 const CHECKIN = "Check-in";
@@ -122,6 +122,7 @@ function action_(b) {
     case "updateGuest": return updateGuest_(b.email, b.fields || {});
     case "markSent": return markSent_(b.emails || [], b.which === "reminded" ? C.reminded : C.sent, !!b.on);
     case "markBounced": return markBounced_(b.emails || [], !!b.on);
+    case "addRsvp": return addRsvp_(b);
     case "removeGuest": return removeGuest_(b.email);
     case "deleteGuests": return deleteGuests_(b.keys || []);
     case "checkIn": return checkIn_(b.email, b.name, b.company, false, b.by);
@@ -191,7 +192,7 @@ function snapshot_() {
     });
   const rv = getSheet_().getDataRange().getValues().slice(1).filter(r => r.join("") !== "").map(r => ({
     submitted: iso_(r[0]), first: String(r[1]), last: String(r[2]), email: String(r[3]).trim(),
-    role: String(r[4]), company: String(r[5]), attending: String(r[6])
+    role: String(r[4]), company: String(r[5]), attending: String(r[6]), source: String(r[7] || "")
   }));
   const ci = ss.getSheetByName(CHECKIN);
   const arrivals = ci.getLastRow() < 2 ? [] : ci.getRange(2, 1, ci.getLastRow() - 1, CI_HEAD.length).getValues()
@@ -300,6 +301,16 @@ function markBounced_(emails, on) {
   });
   return { marked: marked };
 }
+/* A reply the team heard in person. Same row shape as a guest RSVP, marked in Source. No email is fine:
+   the row gets a stand-in key so the person can still be checked in and deleted. */
+function addRsvp_(b) {
+  const first = clean_(b.first).trim(), email = clean_(b.email).trim();
+  if (!first) throw new Error("Add their first name.");
+  if (email && !validEmail_(email)) throw new Error("That email doesn't look right.");
+  getSheet_().appendRow([new Date(), first, clean_(b.last).trim(), email || "wom-" + Date.now(), clean_(b.role).trim(), clean_(b.company).trim(),
+    b.attending === "No" ? "No" : "Yes", "Word of mouth"]);
+  return "ok";
+}
 function removeGuest_(email) {
   const row = findGuestRow_(email);
   if (row < 0) throw new Error("Guest not found.");
@@ -395,7 +406,8 @@ function getSheet_() {
 
 function ensureTabs_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  getSheet_();
+  const rs = getSheet_();
+  if (rs.getRange(1, 8).getValue() === "") rs.getRange(1, 8).setValue("Source").setFontWeight("bold");  // sheets from before this column
   let g = ss.getSheetByName(GUESTS);
   if (!g) {
     g = ss.insertSheet(GUESTS);
