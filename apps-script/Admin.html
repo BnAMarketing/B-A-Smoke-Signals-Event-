@@ -306,11 +306,11 @@ dialog::backdrop{background:rgba(16,24,40,.45)}
     <!-- rsvps -->
     <section class="view" id="v-rsvps" hidden>
       <div class="head">
-        <div><h1>RSVPs<span class="c" id="rCount"></span></h1><p class="muted">Every reply, newest first: from the invite page, or added here by word of mouth.</p></div>
+        <div><h1>RSVPs<span class="c" id="rCount"></span></h1><p class="muted">Every reply, newest first, from the invite page or added here.</p></div>
         <div class="row">
           <button class="btn text" type="button" id="rCsvBtn">CSV</button>
           <button class="btn ghost" type="button" id="rXlsxBtn">Download Excel</button>
-          <button class="btn" type="button" id="womBtn">Add word of mouth</button>
+          <button class="btn" type="button" id="womBtn">Add RSVP</button>
         </div>
       </div>
       <div class="head">
@@ -417,7 +417,7 @@ dialog::backdrop{background:rgba(16,24,40,.45)}
 
 <!-- word of mouth -->
 <dialog id="womDlg"><form class="dlg" id="womForm" method="dialog" novalidate>
-  <h2>Add word of mouth</h2>
+  <h2>Add RSVP</h2>
   <p class="muted" style="font-size:14px">For someone who replied in person or by text. They show on RSVPs and on the door list.</p>
   <div class="seg" role="group" aria-label="Their reply"><button type="button" data-a="Yes" aria-pressed="true">Coming</button><button type="button" data-a="No" aria-pressed="false">Can't make it</button></div>
   <div class="fgrid">

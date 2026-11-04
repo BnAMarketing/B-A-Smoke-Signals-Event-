@@ -29,7 +29,7 @@ The event is **Wed Nov 4 2026**, five days out as of 2026-10-30. The back office
 
 | Item | Status |
 |---|---|
-| Backend: `apps-script/`, with `.clasp.json` → Sheet-bound script (`1S408C1h…T42eN`) of the Sheet "AFCEA TechNet RSVPs 2026" | Live, **v13** (v11 Guests mark-sent + opened tracking via personal links + Views tab; v12 Mark bounced; v13 RSVPs word of mouth + Source column) |
+| Backend: `apps-script/`, with `.clasp.json` → Sheet-bound script (`1S408C1h…T42eN`) of the Sheet "AFCEA TechNet RSVPs 2026" | Live, **v14** (v11 Guests mark-sent + opened tracking via personal links + Views tab; v12 Mark bounced; v13 RSVPs word of mouth + Source column; v14 button label "Add RSVP") |
 | `ADMIN_PASSWORD` in Script Properties | Done (owner) |
 | Back office | Standalone at the `/exec` link (`Admin.html`). Owner login verified on v4; v5–v10 tested with the fake-data harness only |
 | Invite page (`index.html`) | Live on GitHub Pages, wired to `/exec`; retries x3; "6:00 PM CT" |
