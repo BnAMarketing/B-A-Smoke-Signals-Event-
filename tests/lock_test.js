@@ -23,7 +23,8 @@ function mkSheet(name, rows) {
       return rg; },
     getDataRange() { return this.getRange(1, 1, this.rows.length, 12); },
     appendRow(v) { this.rows.push(v.slice()); },
-    deleteRow(i) { this.rows.splice(i - 1, 1); }
+    deleteRow(i) { this.rows.splice(i - 1, 1); },
+    deleteColumn(c) { this.rows.forEach(r => r.splice(c - 1, 1)); }
   };
   return new Proxy(sh, { get(t, k) { return k in t ? t[k] : () => sh; } });
 }
@@ -165,25 +166,26 @@ function setup() {
   check("can't mark someone bounced after they replied", b2.result.marked === 0);
 }
 
-// --- 8. Word of mouth: added by hand with or without an email; old sheets get the Source header
+// --- 8. Add RSVP by hand, with or without an email; the dropped Source column is cleaned up
 {
   const { ctx, sheets } = setup();
-  check("RSVPs tab has the Source header", sheets["RSVPs"].rows[0][7] === "Source");
-  sheets["RSVPs"].rows[0].length = 7;  // a sheet from before the column
+  check("RSVPs tab has no Source header", sheets["RSVPs"].rows[0].length === 7);
+  sheets["RSVPs"].rows[0][7] = "Source";  // what v13 and v14 added to the real sheet
+  sheets["RSVPs"].rows.push([new Date(), "Old", "Row", "old@x.com", "", "", "Yes", "Word of mouth"]);
   ctx.adminApi("pw", "snapshot", {});
-  check("Source header is added to an existing sheet", sheets["RSVPs"].rows[0][7] === "Source");
+  check("Source column is removed, RSVP data kept", sheets["RSVPs"].rows[0].length === 7 && sheets["RSVPs"].rows[1].length === 7 && sheets["RSVPs"].rows[1][3] === "old@x.com" && sheets["RSVPs"].rows[1][6] === "Yes");
   const a = ctx.adminApi("pw", "addRsvp", { first: "Wes", last: "T", company: "=ACME", attending: "Yes" });
-  const r = a.data.rsvps[0];
-  check("word of mouth saves with no email, using a stand-in key", a.ok && /^wom-/.test(r.email) && r.source === "Word of mouth" && r.attending === "Yes");
-  check("word of mouth values are cleaned", r.company === "'=ACME");
+  const r = a.data.rsvps[1];
+  check("added RSVP saves with no email, using a stand-in key", a.ok && /^added-/.test(r.email) && r.attending === "Yes" && sheets["RSVPs"].rows[2].length === 7);
+  check("added RSVP values are cleaned", r.company === "'=ACME");
   const n = ctx.adminApi("pw", "addRsvp", { first: "Nia", email: "nia@x.com", attending: "No" });
-  check("word of mouth can record Can't make it", n.data.rsvps[1].attending === "No" && n.data.rsvps[1].email === "nia@x.com");
-  check("word of mouth needs a first name", ctx.adminApi("pw", "addRsvp", { first: " " }).ok === false);
-  check("word of mouth rejects a bad email", ctx.adminApi("pw", "addRsvp", { first: "X", email: "nope" }).ok === false);
+  check("added RSVP can record Can't make it", n.data.rsvps[2].attending === "No" && n.data.rsvps[2].email === "nia@x.com");
+  check("added RSVP needs a first name", ctx.adminApi("pw", "addRsvp", { first: " " }).ok === false);
+  check("added RSVP rejects a bad email", ctx.adminApi("pw", "addRsvp", { first: "X", email: "nope" }).ok === false);
   const key = r.email.toLowerCase();
   ctx.adminApi("pw", "checkIn", { email: key, name: "Wes T", company: "" });
   const del = ctx.adminApi("pw", "deleteGuests", { keys: [key] });
-  check("no-email word of mouth can be checked in and deleted", del.ok && del.result.rsvpRows === 1 && del.result.checkinRows === 1);
+  check("no-email RSVP can be checked in and deleted", del.ok && del.result.rsvpRows === 1 && del.result.checkinRows === 1);
 }
 
 console.log(`\n${assertions - failures}/${assertions} passed`);

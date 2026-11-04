@@ -415,7 +415,7 @@ dialog::backdrop{background:rgba(16,24,40,.45)}
   <div class="row"><button class="btn" type="button" id="walkSave">Check in</button><button class="btn text" type="button" id="walkCancel">Cancel</button></div>
 </form></dialog>
 
-<!-- word of mouth -->
+<!-- add rsvp -->
 <dialog id="womDlg"><form class="dlg" id="womForm" method="dialog" novalidate>
   <h2>Add RSVP</h2>
   <p class="muted" style="font-size:14px">For someone who replied in person or by text. They show on RSVPs and on the door list.</p>
@@ -518,7 +518,7 @@ function people() {
     const k = lc(r.email); if (!k) return;
     let p = map.get(k);
     if (!p) { p = { key: k, onList: false, first: r.first, last: r.last, email: /@/.test(r.email) ? r.email : "", company: r.company, status: "", sent: "", reminded: "", notes: "" }; map.set(k, p); }
-    p.source = r.source || p.source || ""; p.role = r.role || p.role; p.company = p.company || r.company; p.first = p.first || r.first; p.last = p.last || r.last;
+    p.role = r.role || p.role; p.company = p.company || r.company; p.first = p.first || r.first; p.last = p.last || r.last;
     p.reply = r.attending === "Yes" ? "yes" : r.attending === "No" ? "no" : p.reply; p.replied = r.submitted;
   });
   const arr = new Map(D.arrivals.map(a => [lc(a.email), a]));
@@ -673,14 +673,13 @@ function renderGuests(P) {
 }
 
 /* RSVPs = replies only, including people who RSVP'd without being on the list */
-const RF = [["all", "All replies"], ["yes", "Coming"], ["no", "Can't make it"], ["wom", "Word of mouth"]];
-const rIn = (p, k) => k === "all" || (k === "wom" ? !!p.source : p.reply === k);
-function rMatch(p) { return !!p.reply && textMatch(p, lc($("rq").value)) && rIn(p, rFilter); }
+const RF = [["all", "All replies"], ["yes", "Coming"], ["no", "Can't make it"]];
+function rMatch(p) { return !!p.reply && textMatch(p, lc($("rq").value)) && (rFilter === "all" || p.reply === rFilter); }
 function renderRsvps(P) {
   const R = P.filter(p => p.reply);
   $("rCount").textContent = R.length;
   const f = $("rfilters"); f.textContent = "";
-  RF.forEach(([k, l]) => { const n = R.filter(p => rIn(p, k)).length; if (k === "wom" && !n && rFilter !== k) return;
+  RF.forEach(([k, l]) => { const n = k === "all" ? R.length : R.filter(p => p.reply === k).length;
     const b = el("button", null, l + " · " + n); b.type = "button"; b.setAttribute("aria-pressed", String(rFilter === k));
     b.onclick = () => { rFilter = k; renderRsvps(people()); }; f.append(b); });
   const rows = R.filter(rMatch), tb = $("rbody"); tb.textContent = "";
@@ -689,7 +688,7 @@ function renderRsvps(P) {
     const tr = el("tr");
     const c1 = el("td"); c1.append(el("span", "nm", nameOf(p)), el("span", "sub", p.email || "No email"));
     const c2 = el("td"); c2.append(document.createTextNode(p.company || "")); if (p.role) c2.append(el("span", "sub", p.role));
-    const c3 = el("td"); c3.append(status(p, true)); if (p.source) c3.append(el("span", "sub", p.source)); else if (!p.onList) c3.append(el("span", "sub", "Not on the guest list"));
+    const c3 = el("td"); c3.append(status(p, true)); if (!p.onList) c3.append(el("span", "sub", "Not on the guest list"));
     const c4 = el("td"); c4.append(el("span", "sub", dtStr(p.replied)));
     const c5 = el("td"); c5.append(rowMenu(p));
     tr.append(c1, c2, c3, c4, c5); tb.append(tr);
@@ -867,7 +866,7 @@ $("addSave").onclick = async () => {
   finally { $("addSave").disabled = false; }
 };
 
-/* word of mouth: a reply heard in person, added to RSVPs */
+/* Add RSVP: a reply the team records by hand */
 let womReply = "Yes";
 const womPick = v => { womReply = v; document.querySelectorAll("#womForm [data-a]").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.a === v))); };
 document.querySelectorAll("#womForm [data-a]").forEach(b => b.onclick = () => womPick(b.dataset.a));
@@ -887,8 +886,8 @@ $("womSave").onclick = async () => {
 const fmtReply = p => p.reply === "yes" ? "Attending" : p.reply === "no" ? "Declined" : "";
 const STAGE = { bounced: "Bounced", invite: "Needs invite", sent: "Invited, not opened", viewed: "Opened, no reply", yes: "Coming", no: "Can't make it" };
 function exportRows(kind) {
-  if (kind === "rsvps") return [["First name", "Last name", "Email", "Company", "Role", "RSVP", "Replied", "Source", "On guest list", "Checked in"]].concat(people().filter(rMatch).map(p => [
-    p.first || "", p.last || "", p.email || "", p.company || "", p.role || "", fmtReply(p), dtStr(p.replied), p.source || "Invite page", p.onList ? "Yes" : "No", dtStr(p.arrived)]));
+  if (kind === "rsvps") return [["First name", "Last name", "Email", "Company", "Role", "RSVP", "Replied", "On guest list", "Checked in"]].concat(people().filter(rMatch).map(p => [
+    p.first || "", p.last || "", p.email || "", p.company || "", p.role || "", fmtReply(p), dtStr(p.replied), p.onList ? "Yes" : "No", dtStr(p.arrived)]));
   return [["First name", "Last name", "Email", "Company", "Status", "Invite sent", "Reminder sent", "Opened", "RSVP", "Personal link", "Notes"]].concat(people().filter(gMatch).map(p => [
     p.first || "", p.last || "", p.email || "", p.company || "", STAGE[emailStage(p)], dtStr(p.sent), dtStr(p.reminded), dtStr(p.viewed), fmtReply(p), p.link || "", p.notes || ""]));
 }
